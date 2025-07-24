@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QSplitter
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 from app_ui.ScriptManager import ScriptManager
 from app_ui.FormBuilder import FormBuilder
 from app_ui.LoggerManager import LoggerManager
@@ -23,7 +24,11 @@ class ScriptExecutor(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("脚本执行器")
-        self.resize(800, 600)
+        self.resize(1200, 800)
+        
+        # 设置全局字体，与窗口标题保持一致
+        self.set_global_font()
+        
         self.script_manager = ScriptManager(SCRIPTS_DIR)
         self.logger_manager = LoggerManager(LOG_FILE, self.append_log)
         self.form_builder = FormBuilder(self)
@@ -45,12 +50,12 @@ class ScriptExecutor(QMainWindow):
         left_panel = QVBoxLayout()
         left_panel.setSpacing(8)
         script_title = QLabel("可用脚本")
-        script_title.setStyleSheet("font-size: 15px; margin-bottom: 8px;")
+        script_title.setStyleSheet("margin-bottom: 8px;")
         left_panel.addWidget(script_title)
         self.script_tree = QTreeWidget()
         self.script_tree.setHeaderHidden(True)
-        self.script_tree.setMinimumWidth(180)
-        self.script_tree.setMaximumWidth(260)
+        self.script_tree.setMinimumWidth(250)
+        self.script_tree.setMaximumWidth(350)
         self.script_tree.itemSelectionChanged.connect(self.on_script_selected)
         left_panel.addWidget(self.script_tree)
         left_widget = QWidget()
@@ -93,7 +98,7 @@ class ScriptExecutor(QMainWindow):
         right_widget = QWidget()
         right_widget.setLayout(right_panel)
         h_splitter.addWidget(right_widget)
-        h_splitter.setSizes([220, 600])
+        h_splitter.setSizes([300, 900])
         main_splitter.addWidget(h_splitter)
         # 日志区
         from PyQt5.QtWidgets import QFrame
@@ -112,10 +117,19 @@ class ScriptExecutor(QMainWindow):
         log_widget = QWidget()
         log_widget.setLayout(log_panel)
         main_splitter.addWidget(log_widget)
-        main_splitter.setSizes([600, 180])
+        main_splitter.setSizes([700, 200])
         main_layout.addWidget(main_splitter)
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
+
+    def set_global_font(self) -> None:
+        """设置全局字体，与窗口标题保持一致"""
+        # 获取系统默认字体
+        font = QFont()
+        # 设置字体大小为12pt（与窗口标题大小相近）
+        font.setPointSize(12)
+        # 应用到整个应用
+        QApplication.setFont(font)
 
     def append_log(self, msg: str) -> None:
         self.log_text.append(msg)

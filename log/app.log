@@ -212,3 +212,16 @@
 2025-07-24 00:54:39.922 | INFO     | user_script:main:18 - 多选解析后: ['阅读']
 2025-07-24 00:54:39.923 | INFO     | user_script:main:19 - --- END ---
 2025-07-24 00:54:42.073 | INFO     | __main__:run_script:240 - 开始执行脚本: dedup
+2025-07-24 10:07:48.481 | INFO     | __main__:run_script:240 - 开始执行脚本: 基础脚本\hello
+2025-07-24 10:07:48.515 | INFO     | user_script:main:19 - 配置: {'name': '开发者', 'age': '18', 'score': '95.5', 'is_admin': '', 'gender': '男', 'avatar': ''}
+2025-07-24 10:10:05.024 | INFO     | __main__:run_script:254 - 开始执行脚本: 基础脚本\hello
+2025-07-24 10:10:05.032 | INFO     | user_script:main:19 - 配置: {'name': '开发者', 'age': '18', 'score': '95.5', 'is_admin': '', 'gender': '男', 'avatar': ''}
+2025-07-24 10:12:34.688 | INFO     | __main__:run_script:254 - 开始执行脚本: 基础脚本\test_form
+2025-07-24 10:12:34.689 | INFO     | user_script:main:9 - --- 表单控件测试 ---
+2025-07-24 10:12:34.690 | INFO     | user_script:main:10 - 目录选择: 
+2025-07-24 10:12:34.690 | INFO     | user_script:main:11 - 文件选择: 
+2025-07-24 10:12:34.690 | INFO     | user_script:main:12 - 布尔判断: 
+2025-07-24 10:12:34.691 | INFO     | user_script:main:13 - 单选选择: 红色
+2025-07-24 10:12:34.691 | INFO     | user_script:main:14 - 多选选择: 阅读
+2025-07-24 10:12:34.691 | INFO     | user_script:main:18 - 多选解析后: ['阅读']
+2025-07-24 10:12:34.691 | INFO     | user_script:main:19 - --- END ---
