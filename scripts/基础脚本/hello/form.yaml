@@ -1,0 +1,42 @@
+# hello.py 脚本界面配置示例，支持多种类型
+fields:
+  - name: name
+    label: 姓名
+    type: text
+    default: 开发者
+    required: false
+    description: 输入你的名字
+  - name: age
+    label: 年龄
+    type: int
+    default: 18
+    min: 0
+    max: 120
+    description: 请输入年龄
+  - name: score
+    label: 分数
+    type: float
+    default: 95.5
+    min: 0
+    max: 100
+    decimals: 1
+    description: 请输入分数
+  - name: is_admin
+    label: 管理员
+    type: bool
+    default: false
+    description: 是否为管理员
+  - name: gender
+    label: 性别
+    type: select
+    options:
+      - 男
+      - 女
+      - 其他
+    default: 男
+    description: 请选择性别
+  - name: avatar
+    label: 头像文件
+    type: file
+    default: ""
+    description: 选择头像图片文件 

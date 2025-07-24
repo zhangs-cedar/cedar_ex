@@ -1,0 +1,37 @@
+# test_form 脚本界面配置示例，支持多种类型
+fields:
+  - name: test_dir
+    label: 测试目录
+    type: dir
+    default: ""
+    description: 请选择一个目录
+  - name: test_file
+    label: 测试文件
+    type: file
+    default: ""
+    description: 请选择一个文件
+  - name: is_active
+    label: 是否激活
+    type: bool
+    default: false
+    description: 请选择是否激活
+  - name: color
+    label: 颜色
+    type: select
+    options:
+      - 红色
+      - 绿色
+      - 蓝色
+    default: 红色
+    description: 请选择颜色
+  - name: hobbies
+    label: 爱好
+    type: select
+    options:
+      - 阅读
+      - 运动
+      - 音乐
+      - 编程
+    default: 阅读
+    description: 可多选
+    multiple: true 
