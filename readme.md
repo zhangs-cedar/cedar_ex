@@ -1,5 +1,0 @@
- python -m nuitka --standalone --onefile --windows-console-mode=disable --include-package=app_ui --include-package=loguru --include-package=PyQt5 --include-data-dir=scripts=scripts --include-data-dir=configs=configs --assume-yes-for-downloads --show-progress --show-memory --enable-plugin=pyqt5 --windows-icon-from-ico=app_ui/icon.ico --output-dir=dist --output-filename=ScriptExecutor.exe main.py
-
-
-
-python -m nuitka --standalone --debug --debugger --unstripped --windows-console-mode=force --include-package=app_ui --include-package=loguru --include-package=PyQt5 --include-data-dir=scripts=scripts --include-data-dir=configs=configs --assume-yes-for-downloads --show-progress --show-memory --enable-plugin=pyqt5 --windows-icon-from-ico=app_ui/icon.ico --output-dir=dist_debug --output-filename=ScriptExecutor_debug.exe main.py
