@@ -1,0 +1,36 @@
+{
+    "product_name": "ScriptExecutor",
+    "version": "1.0.0",
+    "author": "Cedar Team",
+    "description": "脚本执行器 - 可视化脚本管理和执行工具",
+    "output_dir": "dist",
+    "include_dirs": [
+        "scripts",
+        "configs",
+        "app_ui"
+    ],
+    "exclude_patterns": [
+        "__pycache__",
+        "*.pyc",
+        ".git",
+        ".conda",
+        "*.log",
+        "build",
+        "dist"
+    ],
+    "nuitka_options": [
+        "--standalone",
+        "--onefile",
+        "--windows-console-mode=disable",
+        "--include-package=app_ui",
+        "--include-package=loguru",
+        "--include-package=PyQt5",
+        "--include-data-dir=scripts=scripts",
+        "--include-data-dir=configs=configs",
+        "--assume-yes-for-downloads",
+        "--show-progress",
+        "--show-memory",
+        "--enable-plugin=pyqt5",
+        "--windows-icon-from-ico=app_ui/icon.ico"
+    ]
+}
