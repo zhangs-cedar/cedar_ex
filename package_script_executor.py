@@ -11,6 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import List
+import pkg_resources
 
 
 def check_nuitka() -> bool:
@@ -36,6 +37,46 @@ def clean_output_dir(output_dir: Path) -> None:
         shutil.rmtree(output_dir)
     output_dir.mkdir(exist_ok=True)
     print(f"创建输出目录: {output_dir}")
+
+
+def get_installed_packages() -> List[str]:
+    """获取当前环境下所有需要include的包名（排除pip、setuptools、wheel等且能import成功）"""
+    exclude = {
+        "pip", "setuptools", "wheel",
+        "MarkupSafe",
+        "nuitka",
+        "pyinstaller",
+        "pyinstaller-hooks-contrib",
+        "pkgutil-resolve-name",
+        "typeguard",
+        "backports.tarfile",
+        "autocommand",
+        "importlib-metadata",
+        "importlib-resources",
+        "typing-extensions",
+        "zipp",
+        "altgraph",
+        "ply",
+        "more-itertools",
+        "platformdirs",
+        "inflect",
+        "jaraco.collections",
+        "jaraco.context",
+        "jaraco.functools",
+        "jaraco.text"
+    }  # 可手动排除
+    packages = []
+    for dist in pkg_resources.working_set:
+        name = dist.project_name
+        if name.lower() in exclude:
+            continue
+        try:
+            __import__(name)
+            packages.append(name)
+        except Exception:
+            # 不能import的包不加入
+            pass
+    return packages
 
 
 def build_exe(product_name: str, output_dir: Path, nuitka_options: List[str]) -> bool:
@@ -105,6 +146,7 @@ def main():
         "--standalone",
         "--onefile",
         "--windows-console-mode=disable",
+        # 保留手动include的包
         "--include-package=app_ui",
         "--include-package=loguru",
         "--include-package=PyQt5",
@@ -116,6 +158,11 @@ def main():
         "--enable-plugin=pyqt5",
         "--windows-icon-from-ico=app_ui/icon.ico"
     ]
+    # 自动添加所有环境包
+    for pkg in get_installed_packages():
+        # 避免重复添加
+        if f"--include-package={pkg}" not in nuitka_options:
+            nuitka_options.append(f"--include-package={pkg}")
 
     if not check_nuitka():
         sys.exit(1)
@@ -133,4 +180,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -1,5 +1,14 @@
 from loguru import logger
 from typing import Dict, Any
+from cedar.init import *
+
+
+# 打印已经加载的包（使用loguru循环输出）
+# 打印已经加载的包（使用loguru循环输出）
+for name in list(globals()):
+    if not name.startswith('_'):
+        logger.info(f"已加载包: {name}")
+        # logger.info(f"已加载包: {name}")
 
 def main(config: Dict[str, Any]) -> None:
     """测试表单各类型控件的功能

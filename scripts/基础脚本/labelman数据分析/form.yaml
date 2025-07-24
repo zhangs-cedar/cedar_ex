@@ -1,0 +1,13 @@
+fields:
+  - name: input_directory
+    label: "输入数据文件夹路径"
+    type: dir
+    default: ""
+    required: true
+    description: "选择需要分析的Labelman数据文件夹"
+  - name: output_name
+    label: "输出文件名"
+    type: text
+    default: ""
+    required: true
+    description: "分析结果保存的文件名（不含扩展名）" 
