@@ -294,12 +294,20 @@ class ScriptExecutorUI(QMainWindow):
             for k, w in self.form_fields.items():
                 try:
                     # 多选QListWidget
-                    from PyQt5.QtWidgets import QListWidget
-                    if hasattr(w, 'isChecked') and callable(w.isChecked):
+                    from PyQt5.QtWidgets import QListWidget, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox, QDateEdit
+                    if isinstance(w, QCheckBox):
                         config[k] = w.isChecked()
                     elif isinstance(w, QListWidget):
                         selected = w.selectedItems()
                         config[k] = [item.text() for item in selected]
+                    elif isinstance(w, QSpinBox):
+                        config[k] = w.value()
+                    elif isinstance(w, QDoubleSpinBox):
+                        config[k] = w.value()
+                    elif isinstance(w, QComboBox):
+                        config[k] = w.currentText()
+                    elif isinstance(w, QDateEdit):
+                        config[k] = w.date().toString("yyyy-MM-dd")
                     elif hasattr(w, 'currentText') and callable(w.currentText):
                         config[k] = w.currentText()
                     elif hasattr(w, 'text') and callable(w.text):
