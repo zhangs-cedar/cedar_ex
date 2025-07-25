@@ -4,17 +4,12 @@ import pandas as pd
 import os
 import json
 import random
-from collections import defaultdict
-from PIL import Image
-from io import BytesIO
-from cedar.image import array_to_base64, path_to_url
-from cedar.image import imread
-from cedar.utils import split_filename
 import os.path as osp
 import altair as alt
-from loguru import logger
-import yaml
-from typing import Dict, Any
+from collections import defaultdict
+from cedar.image import imread,array_to_base64, path_to_url
+from cedar.utils import split_filename,print
+
 
 class ImageProcessing:
     def __init__(self, img_cv2: np.ndarray, points: np.ndarray):
@@ -161,7 +156,7 @@ class DataProcessor:
                 self.process_file(root, file)
                 print(f"已处理进度: {idx}/{total_files}")
                 if idx % 10 == 0 or idx == total_files:
-                    logger.info(f"已处理进度: {idx}/{total_files}")
+                    print(f"已处理进度: {idx}/{total_files}")
 
 
     def process_file(self, root: str, file: str):

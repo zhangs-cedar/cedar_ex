@@ -83,8 +83,8 @@ class ScriptExecutor(QObject):
             logger.info(f"启动脚本: {' '.join(cmd)}")
             self.current_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                # stdout=None,  # 让输出继承父进程
+                # stderr=None,  # 让输出继承父进程
                 text=True,
                 bufsize=1,
                 env=env
@@ -93,7 +93,7 @@ class ScriptExecutor(QObject):
             self.is_running = True
             self.last_log_position = 0
             # 启动日志监控定时器（每500ms检查一次）
-            self.monitor_timer.start(500)
+            self.monitor_timer.start(1000)
             # 启动进程监控线程
             monitor_thread = threading.Thread(
                 target=self._monitor_process, 
@@ -119,7 +119,7 @@ class ScriptExecutor(QObject):
                 # 尝试优雅终止
                 self.current_process.terminate()
                 
-                # 等待5秒，如果还没结束则强制终止
+                # 等待5000000秒，如果还没结束则强制终止
                 try:
                     self.current_process.wait(timeout=5)
                 except subprocess.TimeoutExpired:

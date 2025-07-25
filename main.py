@@ -13,11 +13,8 @@ from app_ui.ScriptManager import ScriptManager
 from app_ui.ScriptExecutor import ScriptExecutor
 from app_ui.FormBuilder import FormBuilder
 from app_ui.LoggerManager import LoggerManager
-from loguru import logger
 from typing import Dict, Any
-import threading
-import re
-from cedar.utils import print
+
 
 SCRIPTS_DIR = "scripts"
 CONFIGS_DIR = "configs"
