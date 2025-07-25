@@ -13,12 +13,15 @@ from PyQt5.QtGui import QFont
 from app_ui.ScriptManager import ScriptManager
 from app_ui.ScriptExecutor import ScriptExecutor
 from app_ui.FormBuilder import FormBuilder
-from app_ui.LoggerManager import LoggerManager
+
 from typing import Dict, Any
+from cedar.utils import print
+
 
 SCRIPTS_DIR = "scripts"
 CONFIGS_DIR = "configs"
 LOG_FILE = "log/app.log"
+os.environ["LOG_PATH"] = LOG_FILE
 CEDAR_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_tree_item_path(item):
@@ -46,7 +49,6 @@ class ScriptExecutorUI(QMainWindow):
         self.set_global_font()
         self.script_manager = ScriptManager(SCRIPTS_DIR)
         self.script_executor = ScriptExecutor(SCRIPTS_DIR)
-        self.logger_manager = LoggerManager(LOG_FILE, self.append_log)
         self.form_builder = FormBuilder(self)
         self.script_executor.log_received.connect(self.append_log)
         self.script_executor.script_started.connect(self.on_script_started)
@@ -67,7 +69,6 @@ class ScriptExecutorUI(QMainWindow):
         QApplication.setFont(font)
 
     def append_log(self, msg: str) -> None:
-        print(f"[LOG] {msg}")
         self.log_text.append(msg)
         QTimer.singleShot(0, self._scroll_log_to_end)
 
@@ -160,6 +161,7 @@ class ScriptExecutorUI(QMainWindow):
         """初始化日志文件偏移量，只记录启动时已有内容"""
         log_dir = os.path.join(os.getcwd(), "log")
         if not os.path.exists(log_dir):
+            print("[提示] 日志目录不存在")
             self.append_log("[提示] 日志目录不存在")
             return
         for root, _, files in os.walk(log_dir):
@@ -306,25 +308,26 @@ class ScriptExecutorUI(QMainWindow):
             QMessageBox.critical(self, "错误", "启动脚本失败")
 
     def on_script_started(self, script_name: str) -> None:
-        logger = self.logger_manager.get_logger()
-        logger.info(f"脚本开始执行: {script_name}")
+        print(f"脚本开始执行: {script_name}")
+        self.append_log(f"脚本开始执行: {script_name}")
         self.run_btn.setEnabled(False)
         self.form_widget.setEnabled(False)
         self.run_btn.setText("运行中...")
 
     def on_script_finished(self, exit_code: int) -> None:
-        logger = self.logger_manager.get_logger()
         if exit_code == 0:
-            logger.info("脚本执行完成")
+            print("脚本执行完成")
+            self.append_log("脚本执行完成")
         else:
-            logger.error(f"脚本执行失败，退出码: {exit_code}")
+            print(f"脚本执行失败，退出码: {exit_code}")
+            self.append_log(f"脚本执行失败，退出码: {exit_code}")
         self.run_btn.setEnabled(True)
         self.form_widget.setEnabled(True)
         self.run_btn.setText("运行脚本")
 
     def on_script_error(self, error_msg: str) -> None:
-        logger = self.logger_manager.get_logger()
-        logger.error(f"脚本执行错误: {error_msg}")
+        print(f"脚本执行错误: {error_msg}")
+        self.append_log(f"脚本执行错误: {error_msg}")
         QMessageBox.critical(self, "错误", f"脚本执行错误: {error_msg}")
         self.run_btn.setEnabled(True)
         self.form_widget.setEnabled(True)
@@ -340,6 +343,7 @@ class ScriptExecutorUI(QMainWindow):
     def monitor_log_dir(self) -> None:
         log_dir = os.path.join(os.getcwd(), "log")
         if not os.path.exists(log_dir):
+            print("[提示] 日志目录不存在")
             self.append_log("[提示] 日志目录不存在")
             return
         for root, _, files in os.walk(log_dir):
@@ -357,7 +361,8 @@ class ScriptExecutorUI(QMainWindow):
                                     self.append_log(f"[{rel_path}] {line.strip()}")
                             self.log_file_offsets[fpath] = f.tell()
                 except Exception as e:
-                    self.append_log(f"[日志监控异常] {fname}: {e}\n{traceback.format_exc()}")
+                    print(f"[日志监控异常] {fname}: {e}")
+                    self.append_log(f"[日志监控异常] {fname}: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
