@@ -19,6 +19,7 @@ class ScriptExecutor(QObject):
     script_started = pyqtSignal(str)  # 脚本开始执行
     script_finished = pyqtSignal(int)  # 脚本执行完成，返回退出码
     script_error = pyqtSignal(str)  # 脚本执行错误
+    stop_timer_signal = pyqtSignal()  # 用于主线程安全stop QTimer
     
     def __init__(self, scripts_dir: str):
         """
@@ -40,6 +41,7 @@ class ScriptExecutor(QObject):
         # 创建监控定时器
         self.monitor_timer = QTimer()
         self.monitor_timer.timeout.connect(self._monitor_log_file)
+        self.stop_timer_signal.connect(self._stop_monitor_timer)
         
     def run_script(self, script_rel_path: str, config: Dict[str, Any], cedar_base_dir: str = None) -> bool:
         """
@@ -110,7 +112,7 @@ class ScriptExecutor(QObject):
     def stop_script(self) -> None:
         """停止当前运行的脚本"""
         if self.monitor_timer:
-            self.monitor_timer.stop()
+            self.stop_timer_signal.emit()
         
         self.is_running = False
         
@@ -153,7 +155,7 @@ class ScriptExecutor(QObject):
         finally:
             self.is_running = False
             if self.monitor_timer:
-                self.monitor_timer.stop()
+                self.stop_timer_signal.emit()
     
     def _monitor_log_file(self) -> None:
         """监控日志文件变化"""
@@ -209,3 +211,7 @@ class ScriptExecutor(QObject):
                 logger.error(f"删除临时日志文件失败: {e}")
         
         self.log_file_path = None 
+
+    def _stop_monitor_timer(self):
+        if self.monitor_timer:
+            self.monitor_timer.stop() 
