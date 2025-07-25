@@ -56,7 +56,29 @@ class ScriptExecutorUI(QMainWindow):
         self.log_file_offsets: Dict[str, int] = {}  # 记录每个日志文件的已读偏移量
         self.log_monitor_timer: QTimer = QTimer(self)
         self.log_monitor_timer.timeout.connect(self.monitor_log_dir)
+        self.init_log_offsets()  # 初始化日志文件偏移量，避免显示历史日志
         self.log_monitor_timer.start(1000)  # 每秒检查一次
+
+    def init_log_offsets(self) -> None:
+        """初始化日志文件偏移量，只记录启动时已有内容（中文注释）
+        
+        处理流程：
+            1. 递归遍历/log目录及所有子目录
+            2. 记录每个日志文件的当前大小（字节偏移量）
+            3. 避免启动时显示历史日志内容
+        """
+        log_dir = os.path.join(os.getcwd(), "log")
+        if not os.path.exists(log_dir):
+            return
+        for root, _, files in os.walk(log_dir):
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                try:
+                    with open(fpath, "rb") as f:
+                        f.seek(0, 2)  # 移动到文件末尾
+                        self.log_file_offsets[fpath] = f.tell()
+                except Exception:
+                    self.log_file_offsets[fpath] = 0
 
     def init_ui(self):
         main_widget = QWidget()
