@@ -13,7 +13,7 @@ from utils import DataProcessor, DefectChart
 
 def init():
     """准备工作"""
-    cedar_base_dir = os.environ.get('CEDAR_BASE_DIR')
+    cedar_base_dir = os.environ.get('CEDAR_BASE_DIR',"./") 
     script_name = osp.basename(osp.dirname(__file__))
     log_dir = osp.join(cedar_base_dir, 'log', script_name)
     os.makedirs(log_dir,exist_ok=True)
@@ -58,11 +58,4 @@ def run(config):
     print(f"图表已保存至: {html_filename}")
 
 if __name__ == "__main__":
-    # input_directory = input("请输入数据文件夹路径:")
-    # output_name = input("请输入输出文件名:")
-    # config = {
-    #     "input_directory": input_directory,
-    #     "output_name": output_name
-    # }
-    # run(config)
     main()
