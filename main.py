@@ -10,18 +10,22 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont
 from app_ui.ScriptManager import ScriptManager
+from app_ui.ScriptExecutor import ScriptExecutor
 from app_ui.FormBuilder import FormBuilder
 from app_ui.LoggerManager import LoggerManager
 from loguru import logger
 from typing import Dict, Any
 import threading
 import re
+from cedar.utils import print
 
 SCRIPTS_DIR = "scripts"
 CONFIGS_DIR = "configs"
 LOG_FILE = "log/app.log"
+CEDAR_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-class ScriptExecutor(QMainWindow):
+
+class ScriptExecutorUI(QMainWindow):
     """脚本执行器主窗口"""
     log_signal = pyqtSignal(str)
 
@@ -34,8 +38,16 @@ class ScriptExecutor(QMainWindow):
         self.set_global_font()
         
         self.script_manager = ScriptManager(SCRIPTS_DIR)
+        self.script_executor = ScriptExecutor(SCRIPTS_DIR)
         self.logger_manager = LoggerManager(LOG_FILE, self.append_log)
         self.form_builder = FormBuilder(self)
+        
+        # 连接脚本执行器信号
+        self.script_executor.log_received.connect(self.append_log)
+        self.script_executor.script_started.connect(self.on_script_started)
+        self.script_executor.script_finished.connect(self.on_script_finished)
+        self.script_executor.script_error.connect(self.on_script_error)
+        
         self.init_ui()
         self.load_scripts()
         self.log_signal.connect(self.append_log)
@@ -234,10 +246,12 @@ class ScriptExecutor(QMainWindow):
         self.form_fields = {}
 
     def run_script(self) -> None:
+        """运行脚本"""
         item = self.script_tree.currentItem()
         if not item:
             QMessageBox.warning(self, "提示", "请先选择一个脚本")
             return
+            
         # 递归获取完整路径
         path_parts = []
         node = item
@@ -247,9 +261,11 @@ class ScriptExecutor(QMainWindow):
         if not path_parts:
             QMessageBox.warning(self, "提示", "请先选择一个脚本")
             return
+            
         script_rel_path = os.path.join(*path_parts)  # 传递完整相对路径
-        script_dir = os.path.join(SCRIPTS_DIR, script_rel_path)
         config_path = os.path.join(CONFIGS_DIR, f"{path_parts[-1]}.json")
+        
+        # 收集配置参数
         config = {}
         if hasattr(self, "form_fields") and self.form_fields:
             for k, w in self.form_fields.items():
@@ -276,36 +292,48 @@ class ScriptExecutor(QMainWindow):
         elif os.path.exists(config_path):
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
+        
+        # 使用新的脚本执行器
+        success = self.script_executor.run_script(script_rel_path, config, CEDAR_BASE_DIR)
+        if not success:
+            QMessageBox.critical(self, "错误", "启动脚本失败")
+    
+    def on_script_started(self, script_name: str) -> None:
+        """脚本开始执行回调"""
         logger = self.logger_manager.get_logger()
-        logger.info(f"开始执行脚本: {script_rel_path}")
-        logger.info(f"配置参数: {config}")
+        logger.info(f"脚本开始执行: {script_name}")
         self.run_btn.setEnabled(False)
         self.run_btn.setText("运行中...")
-        proc = self.script_manager.run_script(script_rel_path, config)
-        def read_stream(stream, is_err=False):
-            for line in iter(stream.readline, ''):
-                if line:
-                    # 只保留 '时间 | 级别 | 内容'，去除多余部分
-                    m = re.match(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \| \w+)(?:\s+\| [^|]+)?\s+-\s*(.*)$", line)
-                    if m:
-                        self.log_signal.emit(f"{m.group(1)} | {m.group(2)}")
-                    else:
-                        self.log_signal.emit(line.rstrip())
-            stream.close()
-        def monitor():
-            t1 = threading.Thread(target=read_stream, args=(proc.stdout, False))
-            t2 = threading.Thread(target=read_stream, args=(proc.stderr, True))
-            t1.start()
-            t2.start()
-            t1.join()
-            t2.join()
-            proc.wait()
-            self.run_btn.setEnabled(True)
-            self.run_btn.setText("运行脚本")
-        threading.Thread(target=monitor, daemon=True).start()
+    
+    def on_script_finished(self, exit_code: int) -> None:
+        """脚本执行完成回调"""
+        logger = self.logger_manager.get_logger()
+        if exit_code == 0:
+            logger.info("脚本执行完成")
+        else:
+            logger.error(f"脚本执行失败，退出码: {exit_code}")
+        
+        self.run_btn.setEnabled(True)
+        self.run_btn.setText("运行脚本")
+    
+    def on_script_error(self, error_msg: str) -> None:
+        """脚本执行错误回调"""
+        logger = self.logger_manager.get_logger()
+        logger.error(f"脚本执行错误: {error_msg}")
+        QMessageBox.critical(self, "错误", f"脚本执行错误: {error_msg}")
+        
+        self.run_btn.setEnabled(True)
+        self.run_btn.setText("运行脚本")
+    
+    def closeEvent(self, event) -> None:
+        """窗口关闭事件"""
+        # 清理脚本执行器资源
+        if hasattr(self, 'script_executor'):
+            self.script_executor.cleanup()
+        event.accept()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    win = ScriptExecutor()
+    win = ScriptExecutorUI()
     win.show()
     sys.exit(app.exec_()) 

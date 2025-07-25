@@ -1,0 +1,34 @@
+# 测试新架构脚本的表单配置
+
+fields:
+  - name: test_param
+    label: "测试参数"
+    type: string
+    default: "Hello World"
+    description: "输入一个测试参数"
+    required: true
+
+  - name: total_steps
+    label: "总步数"
+    type: int
+    default: 10
+    min: 1
+    max: 100
+    description: "模拟任务的总步数"
+    required: true
+
+  - name: delay_seconds
+    label: "延迟秒数"
+    type: float
+    default: 1.0
+    min: 0.1
+    max: 10.0
+    description: "每步之间的延迟时间（秒）"
+    required: true
+
+  - name: test_error
+    label: "测试错误"
+    type: bool
+    default: false
+    description: "是否测试错误处理功能"
+    required: false 
