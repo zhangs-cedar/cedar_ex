@@ -154,13 +154,15 @@ class DataProcessor:
             None: The function does not return anything, but processes files.
 
         """
-
+        print(f"开始处理目录: {self.input_dir}")
         for root, dirs, files in os.walk(self.input_dir):
             total_files = len(files)
             for idx, file in enumerate(files, 1):
                 self.process_file(root, file)
+                print(f"已处理进度: {idx}/{total_files}")
                 if idx % 10 == 0 or idx == total_files:
                     logger.info(f"已处理进度: {idx}/{total_files}")
+
 
     def process_file(self, root: str, file: str):
         file_path = osp.join(root, file)

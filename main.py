@@ -7,13 +7,15 @@ from PyQt5.QtWidgets import (
     QFormLayout, QGroupBox, QScrollArea, QFrame, QTreeWidget, QTreeWidgetItem,
     QSplitter
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont
 from app_ui.ScriptManager import ScriptManager
 from app_ui.FormBuilder import FormBuilder
 from app_ui.LoggerManager import LoggerManager
 from loguru import logger
 from typing import Dict, Any
+import threading
+import re
 
 SCRIPTS_DIR = "scripts"
 CONFIGS_DIR = "configs"
@@ -21,6 +23,8 @@ LOG_FILE = "log/app.log"
 
 class ScriptExecutor(QMainWindow):
     """脚本执行器主窗口"""
+    log_signal = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("脚本执行器")
@@ -34,6 +38,7 @@ class ScriptExecutor(QMainWindow):
         self.form_builder = FormBuilder(self)
         self.init_ui()
         self.load_scripts()
+        self.log_signal.connect(self.append_log)
         # 移除自定义QSS样式，保持PyQt默认风格
         # self.setStyleSheet(...)
 
@@ -132,7 +137,13 @@ class ScriptExecutor(QMainWindow):
         QApplication.setFont(font)
 
     def append_log(self, msg: str) -> None:
+        print(f"[LOG] {msg}")  # 调试用，显示UI实际追加的内容
         self.log_text.append(msg)
+        QTimer.singleShot(0, self._scroll_log_to_end)
+
+    def _scroll_log_to_end(self):
+        self.log_text.moveCursor(self.log_text.textCursor().End)
+        self.log_text.ensureCursorVisible()
 
     def load_scripts(self) -> None:
         self.script_tree.clear()
@@ -242,9 +253,24 @@ class ScriptExecutor(QMainWindow):
         config = {}
         if hasattr(self, "form_fields") and self.form_fields:
             for k, w in self.form_fields.items():
-                # 只处理常见控件类型，FormBuilder 已保证类型
                 try:
-                    config[k] = w.text() if hasattr(w, 'text') else w.value() if hasattr(w, 'value') else w.currentText() if hasattr(w, 'currentText') else w.isChecked() if hasattr(w, 'isChecked') else w.date().toString("yyyy-MM-dd") if hasattr(w, 'date') else None
+                    # 多选QListWidget
+                    from PyQt5.QtWidgets import QListWidget
+                    if hasattr(w, 'isChecked') and callable(w.isChecked):
+                        config[k] = w.isChecked()
+                    elif isinstance(w, QListWidget):
+                        selected = w.selectedItems()
+                        config[k] = [item.text() for item in selected]
+                    elif hasattr(w, 'currentText') and callable(w.currentText):
+                        config[k] = w.currentText()
+                    elif hasattr(w, 'text') and callable(w.text):
+                        config[k] = w.text()
+                    elif hasattr(w, 'value') and callable(w.value):
+                        config[k] = w.value()
+                    elif hasattr(w, 'date') and callable(w.date):
+                        config[k] = w.date().toString("yyyy-MM-dd")
+                    else:
+                        config[k] = None
                 except Exception:
                     config[k] = None
         elif os.path.exists(config_path):
@@ -252,7 +278,31 @@ class ScriptExecutor(QMainWindow):
                 config = json.load(f)
         logger = self.logger_manager.get_logger()
         logger.info(f"开始执行脚本: {script_rel_path}")
-        self.script_manager.run_script(script_rel_path, config)
+        logger.info(f"配置参数: {config}")
+        self.run_btn.setEnabled(False)
+        self.run_btn.setText("运行中...")
+        proc = self.script_manager.run_script(script_rel_path, config)
+        def read_stream(stream, is_err=False):
+            for line in iter(stream.readline, ''):
+                if line:
+                    # 只保留 '时间 | 级别 | 内容'，去除多余部分
+                    m = re.match(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \| \w+)(?:\s+\| [^|]+)?\s+-\s*(.*)$", line)
+                    if m:
+                        self.log_signal.emit(f"{m.group(1)} | {m.group(2)}")
+                    else:
+                        self.log_signal.emit(line.rstrip())
+            stream.close()
+        def monitor():
+            t1 = threading.Thread(target=read_stream, args=(proc.stdout, False))
+            t2 = threading.Thread(target=read_stream, args=(proc.stderr, True))
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+            proc.wait()
+            self.run_btn.setEnabled(True)
+            self.run_btn.setText("运行脚本")
+        threading.Thread(target=monitor, daemon=True).start()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

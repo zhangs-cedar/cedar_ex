@@ -1,5 +1,6 @@
 import os
 import importlib.util
+import subprocess
 from typing import List, Dict, Any
 
 class ScriptManager:
@@ -28,22 +29,27 @@ class ScriptManager:
                 scripts.append(entry)
         return scripts
 
-    def run_script(self, script_name: str, config: Dict[str, Any]) -> None:
+    def run_script(self, script_name: str, config: Dict[str, Any]) -> subprocess.Popen:
         """
-        加载并执行指定脚本
+        以子进程方式运行脚本，返回Popen对象，主程序可捕获其stdout/stderr。
         Args:
             script_name: 脚本名称
             config: 配置参数字典
+        Returns:
+            Popen对象
         """
+        import json
+        # 打印参数日志（中文注释）
         script_dir = os.path.join(self.scripts_dir, script_name)
         script_path = os.path.join(script_dir, "main.py")
-        try:
-            spec = importlib.util.spec_from_file_location("user_script", script_path)
-            user_script = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(user_script)
-            if hasattr(user_script, "main"):
-                user_script.main(config)
-            else:
-                print("脚本未定义 main(config) 函数")
-        except Exception as e:
-            print(f"脚本执行出错: {e}") 
+        # 将config写入临时json
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", encoding="utf-8") as tf:
+            json.dump(config, tf, ensure_ascii=False)
+            tf.flush()
+            config_path = tf.name
+        # 用python执行main.py，传入config路径
+        cmd = ["python", script_path, config_path]
+        print(f"[脚本执行参数] cmd: {cmd}")
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        return proc 

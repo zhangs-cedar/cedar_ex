@@ -2,6 +2,7 @@ import yaml
 from typing import Dict, Any, List
 from PyQt5.QtWidgets import (QLineEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox, QPushButton, QHBoxLayout, QWidget, QDateEdit, QFileDialog, QFormLayout)
 from PyQt5.QtCore import QDate
+from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 
 class FormBuilder:
     """表单生成器，根据 YAML 配置动态生成表单控件"""
@@ -46,6 +47,21 @@ class FormBuilder:
             elif ftype == "bool":
                 widget = QCheckBox()
                 widget.setChecked(bool(default))
+            elif ftype == "select" and field.get("multiple", False):
+                widget = QListWidget()
+                widget.setSelectionMode(QListWidget.MultiSelection)
+                options = field.get("options", [])
+                for opt in options:
+                    item = QListWidgetItem(str(opt))
+                    widget.addItem(item)
+                    if isinstance(default, list) and opt in default:
+                        item.setSelected(True)
+                    elif isinstance(default, str) and opt == default:
+                        item.setSelected(True)
+                widget.setMinimumHeight(min(200, 32 + 24 * len(options)))
+                form_layout.addRow(label, widget)
+                form_fields[name] = widget
+                continue
             elif ftype == "select":
                 widget = QComboBox()
                 for opt in field.get("options", []):
@@ -107,6 +123,15 @@ class FormBuilder:
                         widget.setDate(QDate.currentDate())
                 else:
                     widget.setDate(QDate.currentDate())
+            elif ftype == "doc":
+                # 只读文档说明，使用QLabel或QTextEdit
+                doc_content = field.get("content", "")
+                doc_widget = QTextEdit()
+                doc_widget.setReadOnly(True)
+                doc_widget.setPlainText(str(doc_content))
+                doc_widget.setMinimumHeight(60)
+                form_layout.addRow(label, doc_widget)
+                continue
             if widget:
                 form_layout.addRow(label, widget)
                 form_fields[name] = widget
