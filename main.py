@@ -53,6 +53,10 @@ class ScriptExecutorUI(QMainWindow):
         self.log_signal.connect(self.append_log)
         # 移除自定义QSS样式，保持PyQt默认风格
         # self.setStyleSheet(...)
+        self.log_file_offsets: Dict[str, int] = {}  # 记录每个日志文件的已读偏移量
+        self.log_monitor_timer: QTimer = QTimer(self)
+        self.log_monitor_timer.timeout.connect(self.monitor_log_dir)
+        self.log_monitor_timer.start(1000)  # 每秒检查一次
 
     def init_ui(self):
         main_widget = QWidget()
@@ -331,6 +335,37 @@ class ScriptExecutorUI(QMainWindow):
         if hasattr(self, 'script_executor'):
             self.script_executor.cleanup()
         event.accept()
+
+    def monitor_log_dir(self) -> None:
+        """递归监控/log目录及其所有子目录下的日志文件（中文注释）
+        
+        处理流程：
+            1. 递归遍历/log目录及所有子目录
+            2. 跳过非文件
+            3. 读取每个文件自上次偏移量后的新内容
+            4. 追加到日志输出区
+            5. 更新偏移量
+        """
+        log_dir = os.path.join(os.getcwd(), "log")
+        if not os.path.exists(log_dir):
+            return
+        for root, _, files in os.walk(log_dir):
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                try:
+                    last_offset = self.log_file_offsets.get(fpath, 0)
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        f.seek(last_offset)
+                        new_content = f.read()
+                        if new_content:
+                            # 显示相对路径，便于区分
+                            rel_path = os.path.relpath(fpath, log_dir)
+                            for line in new_content.splitlines():
+                                if line.strip():
+                                    self.append_log(f"[{rel_path}] {line.strip()}")
+                            self.log_file_offsets[fpath] = f.tell()
+                except Exception as e:
+                    self.append_log(f"[日志监控异常] {fname}: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
