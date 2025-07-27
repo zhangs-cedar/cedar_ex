@@ -152,3 +152,4 @@ project/resources/models
 resources/MSYH.TTC
 python.exe.lnk
 /test
+.DS_Store

@@ -37,6 +37,36 @@ def is_safe_script_path(base_dir, script_path):
     abs_script = os.path.abspath(os.path.join(base_dir, script_path))
     return abs_script.startswith(abs_base)
 
+def has_script_file(script_dir):
+    """检查脚本目录中是否有可执行的脚本文件（.py 或 .so）"""
+    if not os.path.isdir(script_dir):
+        return False
+    
+    # 检查是否有 main.py 或 main.cpython-*.so 文件
+    main_py = os.path.join(script_dir, "main.py")
+    if os.path.exists(main_py):
+        return True
+    
+    # 检查是否有编译后的 .so 文件
+    for file in os.listdir(script_dir):
+        if file.startswith("main.cpython-") and file.endswith(".so"):
+            return True
+    
+    return False
+
+def get_script_file_path(script_dir):
+    """获取脚本文件的路径（.py 或 .so）"""
+    main_py = os.path.join(script_dir, "main.py")
+    if os.path.exists(main_py):
+        return main_py
+    
+    # 查找编译后的 .so 文件
+    for file in os.listdir(script_dir):
+        if file.startswith("main.cpython-") and file.endswith(".so"):
+            return os.path.join(script_dir, file)
+    
+    return None
+
 class ScriptExecutorUI(QMainWindow):
     """脚本执行器主窗口"""
     log_signal = pyqtSignal(str)
@@ -182,18 +212,18 @@ class ScriptExecutorUI(QMainWindow):
             for entry in sorted(os.listdir(dir_path)):
                 full_path = os.path.join(dir_path, entry)
                 if os.path.isdir(full_path):
-                    has_main = os.path.exists(os.path.join(full_path, "main.py"))
+                    has_script = has_script_file(full_path)
                     has_subdir = any(os.path.isdir(os.path.join(full_path, e)) for e in os.listdir(full_path))
-                    if has_main or has_subdir:
+                    if has_script or has_subdir:
                         item = QTreeWidgetItem([entry])
                         parent_item.addChild(item)
                         add_items(item, full_path)
         for entry in sorted(os.listdir(SCRIPTS_DIR)):
             full_path = os.path.join(SCRIPTS_DIR, entry)
             if os.path.isdir(full_path):
-                has_main = os.path.exists(os.path.join(full_path, "main.py"))
+                has_script = has_script_file(full_path)
                 has_subdir = any(os.path.isdir(os.path.join(full_path, e)) for e in os.listdir(full_path))
-                if has_main or has_subdir:
+                if has_script or has_subdir:
                     item = QTreeWidgetItem([entry])
                     self.script_tree.addTopLevelItem(item)
                     add_items(item, full_path)
@@ -217,7 +247,7 @@ class ScriptExecutorUI(QMainWindow):
             return
         script_name = path_parts[-1]
         script_dir = os.path.join(SCRIPTS_DIR, *path_parts)
-        if not os.path.exists(os.path.join(script_dir, "main.py")):
+        if not has_script_file(script_dir):
             self.config_label.hide()
             self.doc_label.hide()
             self.clear_form()

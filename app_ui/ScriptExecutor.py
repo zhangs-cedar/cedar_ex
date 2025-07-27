@@ -10,6 +10,23 @@ from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 from datetime import datetime
 from cedar.utils import print
 
+def get_script_file_path(script_dir):
+    """获取脚本文件的路径（.py 或 .so）"""
+    main_py = os.path.join(script_dir, "main.py")
+    if os.path.exists(main_py):
+        return main_py
+    
+    # 查找编译后的 .so 文件
+    for file in os.listdir(script_dir):
+        if file.startswith("main.cpython-") and file.endswith(".so"):
+            return os.path.join(script_dir, file)
+    
+    return None
+
+def is_compiled_script(script_path):
+    """判断是否为编译后的脚本文件"""
+    return script_path.endswith(".so")
+
 class ScriptExecutor(QObject):
     """脚本执行器 - 负责脚本的安全执行和日志监控"""
     
@@ -61,10 +78,12 @@ class ScriptExecutor(QObject):
             self.current_script_name = script_rel_path
             # 准备脚本执行
             script_dir = os.path.join(self.scripts_dir, script_rel_path)
-            script_path = os.path.join(script_dir, "main.py")
-            if not os.path.exists(script_path):
-                self.script_error.emit(f"脚本文件不存在: {script_path}")
+            script_path = get_script_file_path(script_dir)
+            
+            if not script_path:
+                self.script_error.emit(f"脚本文件不存在: {script_dir}")
                 return False
+            
             # 创建临时配置文件
             config_file = tempfile.NamedTemporaryFile(
                 mode="w", 
@@ -80,7 +99,20 @@ class ScriptExecutor(QObject):
             if cedar_base_dir is not None:
                 env['CEDAR_BASE_DIR'] = cedar_base_dir
             # 启动脚本进程
-            cmd = ["python", script_path, config_file.name]
+            if is_compiled_script(script_path):
+                # 对于编译后的 .so 文件，使用 Python 模块导入方式执行
+                cmd = ["python", "-c", f"""
+import sys
+import os
+sys.path.insert(0, '{script_dir}')
+import main
+if __name__ == '__main__':
+    main.main()
+""", config_file.name]
+            else:
+                # 对于 .py 文件，直接执行
+                cmd = ["python", script_path, config_file.name]
+            
             print(f"启动脚本: {' '.join(cmd)}")
             self.current_process = subprocess.Popen(
                 cmd,
