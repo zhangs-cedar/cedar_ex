@@ -7,9 +7,8 @@ import time
 import queue
 from typing import Dict, Any, Optional, Callable
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
-from loguru import logger
 from datetime import datetime
-
+from cedar.utils import print
 
 class ScriptExecutor(QObject):
     """脚本执行器 - 负责脚本的安全执行和日志监控"""
@@ -82,7 +81,7 @@ class ScriptExecutor(QObject):
                 env['CEDAR_BASE_DIR'] = cedar_base_dir
             # 启动脚本进程
             cmd = ["python", script_path, config_file.name]
-            logger.info(f"启动脚本: {' '.join(cmd)}")
+            print(f"启动脚本: {' '.join(cmd)}")
             self.current_process = subprocess.Popen(
                 cmd,
                 # stdout=None,  # 让输出继承父进程
@@ -95,7 +94,7 @@ class ScriptExecutor(QObject):
             self.is_running = True
             self.last_log_position = 0
             # 启动日志监控定时器（每500ms检查一次）
-            self.monitor_timer.start(1000)
+            self.monitor_timer.start(500)
             # 启动进程监控线程
             monitor_thread = threading.Thread(
                 target=self._monitor_process, 
@@ -105,7 +104,7 @@ class ScriptExecutor(QObject):
             self.script_started.emit(script_rel_path)
             return True
         except Exception as e:
-            logger.error(f"启动脚本失败: {e}")
+            print(f"启动脚本失败: {e}")
             self.script_error.emit(f"启动脚本失败: {str(e)}")
             return False
     
@@ -121,16 +120,16 @@ class ScriptExecutor(QObject):
                 # 尝试优雅终止
                 self.current_process.terminate()
                 
-                # 等待5000000秒，如果还没结束则强制终止
+                # 等待5秒，如果还没结束则强制终止
                 try:
                     self.current_process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    logger.warning("脚本未在5秒内终止，强制结束")
+                    print("脚本未在5秒内终止，强制结束")
                     self.current_process.kill()
                     self.current_process.wait()
                     
             except Exception as e:
-                logger.error(f"停止脚本时出错: {e}")
+                print(f"停止脚本时出错: {e}")
             finally:
                 self.current_process = None
     
@@ -150,7 +149,7 @@ class ScriptExecutor(QObject):
             self.script_finished.emit(exit_code)
             
         except Exception as e:
-            logger.error(f"监控进程时出错: {e}")
+            print(f"监控进程时出错: {e}")
             self.script_error.emit(f"监控进程时出错: {str(e)}")
         finally:
             self.is_running = False
@@ -180,7 +179,7 @@ class ScriptExecutor(QObject):
                             self.log_received.emit(line.strip())
                             
         except Exception as e:
-            logger.error(f"读取日志文件时出错: {e}")
+            print(f"读取日志文件时出错: {e}")
     
     def _append_script_log_to_main_log(self) -> None:
         """将本次运行的脚本日志内容追加到 /log/app.log"""
@@ -197,7 +196,7 @@ class ScriptExecutor(QObject):
                     dst.write(line)
                 dst.write("\n" + "="*60 + "\n")
         except Exception as e:
-            logger.error(f"追加脚本日志到主日志失败: {e}")
+            print(f"追加脚本日志到主日志失败: {e}")
     
     def cleanup(self) -> None:
         """清理资源"""
@@ -208,7 +207,7 @@ class ScriptExecutor(QObject):
             try:
                 os.remove(self.log_file_path)
             except Exception as e:
-                logger.error(f"删除临时日志文件失败: {e}")
+                print(f"删除临时日志文件失败: {e}")
         
         self.log_file_path = None 
 

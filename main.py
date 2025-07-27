@@ -1,7 +1,6 @@
 import sys
 import os
 import json
-import traceback
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QTextEdit, QLabel, QMessageBox,

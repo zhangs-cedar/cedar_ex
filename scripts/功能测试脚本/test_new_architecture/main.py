@@ -3,8 +3,7 @@ import os.path as osp
 import sys
 import json
 import time
-from typing import Dict, Any
-from cedar.utils import print,create_name,timeit,try_except
+from cedar.utils import print,create_name,try_except
 
 def init():
     """准备工作"""
@@ -49,9 +48,6 @@ def main():
     config = init()
     test_error(config)
     test_tasks(config)
-
-    
-
 
 
 if __name__ == "__main__":
