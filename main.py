@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont
-from app_ui.ScriptManager import ScriptManager
+
 from app_ui.ScriptExecutor import ScriptExecutor
 from app_ui.FormBuilder import FormBuilder
 
@@ -47,7 +47,7 @@ class ScriptExecutorUI(QMainWindow):
         self.setWindowTitle("脚本执行器")
         self.resize(1200, 800)
         self.set_global_font()
-        self.script_manager = ScriptManager(SCRIPTS_DIR)
+
         self.script_executor = ScriptExecutor(SCRIPTS_DIR)
         self.form_builder = FormBuilder(self)
         self.script_executor.log_received.connect(self.append_log)

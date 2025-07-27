@@ -4,8 +4,7 @@ import sys
 import json
 import time
 from typing import Dict, Any
-from cedar.utils import print,create_name
-import traceback
+from cedar.utils import print,create_name,timeit,try_except
 
 def init():
     """准备工作"""
@@ -21,7 +20,6 @@ def init():
     print(f"加载配置文件: {config_file_path}")
     with open(config_file_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
-        config["log_path"] = log_path
         print(f"加载配置成功: {config}")
     return config
     
@@ -45,20 +43,13 @@ def test_tasks(config):
         print(f"任务第{i+1}步")
     return True
 
-
+@try_except # 装饰器，捕获异常并记录到日志文件
 def main():
     """主函数"""
     config = init()
-    try:
-        test_error(config)
-        test_tasks(config)
-    except Exception as e:
-        # 记录详细的异常类型、消息和堆栈信息到日志文件（中文注释）
-        error_type = type(e).__name__
-        error_msg = str(e)
-        error_trace = traceback.format_exc()
-        print(f"测试任务失败: {error_type}: {error_msg}\n{error_trace}")
-        raise
+    test_error(config)
+    test_tasks(config)
+
     
 
 
