@@ -58,6 +58,9 @@ app_ui/                # 前端界面与核心逻辑
 scripts/               # 用户自定义脚本目录（每个子目录为一个脚本项目）
 log/                   # 日志输出目录
 env/                   # 内置Python环境（免配置）
+tools/                 # 工具脚本目录
+  ├─ pa_mac.py        # Nuitka 打包工具
+  └─ README.md        # 工具使用说明
 ```
 
 ---

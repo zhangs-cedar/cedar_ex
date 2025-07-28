@@ -47,7 +47,13 @@ def count_python_files(directory):
 
 def main():
     # 配置
-    project_root = Path(__file__).parent
+    # 从 tools 目录运行时，项目根目录是上级目录
+    script_dir = Path(__file__).parent
+    if script_dir.name == "tools":
+        project_root = script_dir.parent
+    else:
+        project_root = script_dir
+    
     dist_dir = project_root / "dist" / "main.dist"
     conda_env = "/opt/homebrew/anaconda3/envs/py310"
     python_exe = f"{conda_env}/bin/python"
@@ -134,7 +140,6 @@ def main():
         run_cmd([
             python_exe, "-m", "nuitka",
             "--module",
-            "--include-data-dir=log=log",
             f"--output-dir={dist_dir}",
             str(project_root / "main.py")
         ], show_output=False)
