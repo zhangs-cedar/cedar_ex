@@ -1,0 +1,37 @@
+# 图像分类整理工具的表单配置
+
+fields:
+  - name: input_dir
+    label: "输入目录"
+    type: dir
+    default: ""
+    description: "包含图像文件的输入目录路径"
+    required: true
+
+  - name: save_dir
+    label: "保存目录"
+    type: dir
+    default: ""
+    description: "分类后图像的保存目录路径"
+    required: true
+
+  - name: keep_original_tree
+    label: "保持原始目录结构"
+    type: bool
+    default: false
+    description: "是否保持原始的目录结构"
+    required: false
+
+  - name: keep_jpg
+    label: "包含JPG文件"
+    type: bool
+    default: false
+    description: "是否处理JPG格式的图像文件"
+    required: false
+
+  - name: copy_json
+    label: "复制JSON文件"
+    type: bool
+    default: true
+    description: "是否复制对应的JSON文件"
+    required: false

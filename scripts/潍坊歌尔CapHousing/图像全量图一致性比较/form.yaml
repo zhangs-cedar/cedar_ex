@@ -1,0 +1,60 @@
+# 图像全量图一致性比较脚本的表单配置
+
+fields:
+  - name: input_dir
+    label: "输入目录"
+    type: dir
+    default: ""
+    description: "包含图像数据的输入目录路径"
+    required: true
+
+  - name: save_dir
+    label: "保存目录"
+    type: dir
+    default: ""
+    description: "对比结果保存目录路径（留空则自动生成）"
+    required: false
+
+  - name: num_per_row
+    label: "每行图像数量"
+    type: int
+    default: 10
+    min: 1
+    max: 20
+    description: "拼接图像时每行显示的图像数量"
+    required: true
+
+  - name: clean_output
+    label: "清理输出目录"
+    type: bool
+    default: true
+    description: "是否在开始前清理输出目录"
+    required: false
+
+
+  - name: text_size
+    label: "文本大小"
+    type: int
+    default: 80
+    min: 10
+    max: 200
+    description: "图像上标注文本的大小"
+    required: false
+
+  - name: index_text_size
+    label: "索引文本大小"
+    type: int
+    default: 120
+    min: 10
+    max: 300
+    description: "索引标注文本的大小"
+    required: false
+
+  - name: downsample_level
+    label: "下采样级别"
+    type: int
+    default: 2
+    min: 0
+    max: 5
+    description: "图像下采样的次数（0表示不下采样）"
+    required: false 

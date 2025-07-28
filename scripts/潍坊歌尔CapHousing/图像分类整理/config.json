@@ -1,0 +1,8 @@
+{
+    "input_dir": "D:/SMore/Dataset/sm25148/date/0722/1",
+    "save_dir": "D:/SMore/Dataset/sm25148/date/0722/1-o",
+    "keep_original_tree": true,
+    "keep_jpg": false,
+    "supported_suffixes": [".png"],
+    "copy_json": true
+}
