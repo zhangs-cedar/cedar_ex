@@ -67,6 +67,42 @@ def get_script_file_path(script_dir):
     
     return None
 
+def should_skip_directory(dir_name):
+    """判断是否应该跳过某个目录"""
+    skip_patterns = [
+        ".build",           # Nuitka 构建目录
+        "build",            # 构建目录
+        "__pycache__",      # Python 缓存目录
+        ".git",             # Git 目录
+        ".svn",             # SVN 目录
+        ".hg",              # Mercurial 目录
+        "node_modules",     # Node.js 模块目录
+        ".vscode",          # VS Code 配置目录
+        ".idea",            # IntelliJ 配置目录
+    ]
+    
+    # 检查精确匹配
+    for pattern in skip_patterns:
+        if dir_name == pattern:
+            return True
+    
+    # 检查以 .build 结尾的目录
+    if dir_name.endswith(".build"):
+        return True
+    
+    return False
+
+def has_valid_subdirs(dir_path):
+    """检查目录是否有有效的子目录（排除构建目录）"""
+    try:
+        for entry in os.listdir(dir_path):
+            entry_path = os.path.join(dir_path, entry)
+            if os.path.isdir(entry_path) and not should_skip_directory(entry):
+                return True
+    except (OSError, PermissionError):
+        pass
+    return False
+
 class ScriptExecutorUI(QMainWindow):
     """脚本执行器主窗口"""
     log_signal = pyqtSignal(str)
@@ -210,19 +246,27 @@ class ScriptExecutorUI(QMainWindow):
             return
         def add_items(parent_item, dir_path):
             for entry in sorted(os.listdir(dir_path)):
+                # 跳过不需要显示的目录
+                if should_skip_directory(entry):
+                    continue
+                    
                 full_path = os.path.join(dir_path, entry)
                 if os.path.isdir(full_path):
                     has_script = has_script_file(full_path)
-                    has_subdir = any(os.path.isdir(os.path.join(full_path, e)) for e in os.listdir(full_path))
+                    has_subdir = has_valid_subdirs(full_path)
                     if has_script or has_subdir:
                         item = QTreeWidgetItem([entry])
                         parent_item.addChild(item)
                         add_items(item, full_path)
         for entry in sorted(os.listdir(SCRIPTS_DIR)):
+            # 跳过不需要显示的目录
+            if should_skip_directory(entry):
+                continue
+                
             full_path = os.path.join(SCRIPTS_DIR, entry)
             if os.path.isdir(full_path):
                 has_script = has_script_file(full_path)
-                has_subdir = any(os.path.isdir(os.path.join(full_path, e)) for e in os.listdir(full_path))
+                has_subdir = has_valid_subdirs(full_path)
                 if has_script or has_subdir:
                     item = QTreeWidgetItem([entry])
                     self.script_tree.addTopLevelItem(item)
