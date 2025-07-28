@@ -1,9 +1,8 @@
 {
-    "input_dir": "",
-    "save_dir": "",
+    "input_dir": "D:/SMore/Dataset/sm25148/date/0703-duibi/检测1",
+    "save_dir": "D:/SMore/Dataset/sm25148/date/0703-duibi/检测1vs",
     "num_per_row": 10,
     "clean_output": true,
-    "supported_formats": [".jpg", ".png", ".bmp"],
     "text_size": 80,
     "index_text_size": 120,
     "downsample_level": 2

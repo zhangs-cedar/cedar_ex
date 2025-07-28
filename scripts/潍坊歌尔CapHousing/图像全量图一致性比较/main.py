@@ -5,7 +5,6 @@ import json
 import time
 import numpy as np
 import cv2
-from tqdm import tqdm
 from cedar.image import imread, imwrite
 from cedar.draw import putText,color_list
 from cedar.utils import print, create_name, try_except,rmtree_makedirs
@@ -129,7 +128,7 @@ def compare_images(input_dir: str, save_dir: str, config: dict) -> bool:
         img_dic = {}
         idx_key_list = []
         for root, dirs, files in os.walk(osp.join(input_dir, camera)):
-            for file in tqdm(files, desc=f"处理相机 {camera}"):
+            for file in files:
                 try:
                     file_path = osp.join(root, file)
                     names = osp.basename(file_path)
@@ -147,7 +146,7 @@ def compare_images(input_dir: str, save_dir: str, config: dict) -> bool:
     print(f"相机列表: {camera_key_list}")
     
     # 生成对比图像
-    for idx in tqdm(idx_key_list, desc="生成对比图像"):
+    for idx in idx_key_list:
         imgs = []
         for category in all_images.keys():
             try:
@@ -155,12 +154,14 @@ def compare_images(input_dir: str, save_dir: str, config: dict) -> bool:
                     print(f"category:{category} not in all_images")
                 if idx not in all_images[category].keys():
                     print(f"idx:{idx} not in {category}")
+                print(f"category:{category},idx:{idx}")
                 file_path = all_images[category][idx]
                 img = imread(file_path)
-                img = putText(img, "xj:" + category, (10, 10), text_color=tuple(color_list[2]), text_size=80)
-                img = putText(img, "idx:" + str(idx), (10, 200), text_color=tuple(color_list[2]), text_size=120)
-                img = cv2.pyrDown(img)
-                img = cv2.pyrDown(img)
+                img = putText(img, "xj:" + category, (10, 10), text_color=tuple(color_list[2]), text_size=config.get("text_size", 80))
+                img = putText(img, "idx:" + str(idx), (10, 200), text_color=tuple(color_list[2]), text_size=config.get("index_text_size", 120))
+                downsample_level = config.get("downsample_level", 2)
+                for _ in range(downsample_level):
+                    img = cv2.pyrDown(img)
                 imgs.append(img)
             except Exception as e:
                 print(f"处理图像时出错: {e}")
