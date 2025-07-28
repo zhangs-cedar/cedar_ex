@@ -11,21 +11,20 @@ from datetime import datetime
 from cedar.utils import print
 
 def get_script_file_path(script_dir):
-    """获取脚本文件的路径（.py 或 .so）"""
+    """获取脚本文件的路径（.py、.so 或 .pyd）"""
     main_py = os.path.join(script_dir, "main.py")
     if os.path.exists(main_py):
         return main_py
     
-    # 查找编译后的 .so 文件
+    # 查找编译后的文件 (.so 或 .pyd)
     for file in os.listdir(script_dir):
-        if file.startswith("main.cpython-") and file.endswith(".so"):
+        if ((file.startswith("main.cpython-") or file.startswith("main.cp")) and 
+            (file.endswith(".so") or file.endswith(".pyd"))):
             return os.path.join(script_dir, file)
     
     return None
 
-def is_compiled_script(script_path):
-    """判断是否为编译后的脚本文件"""
-    return script_path.endswith(".so")
+
 
 class ScriptExecutor(QObject):
     """脚本执行器 - 负责脚本的安全执行和日志监控"""
@@ -77,7 +76,7 @@ class ScriptExecutor(QObject):
             self.log_file_path = tempfile.mktemp(suffix='.log')
             self.current_script_name = script_rel_path
             # 准备脚本执行
-            script_dir = os.path.join(self.scripts_dir, script_rel_path)
+            script_dir = os.path.abspath(os.path.join(self.scripts_dir, script_rel_path))
             script_path = get_script_file_path(script_dir)
             
             if not script_path:
@@ -97,18 +96,38 @@ class ScriptExecutor(QObject):
             env = os.environ.copy()
             env['SCRIPT_LOG_FILE'] = self.log_file_path
             if cedar_base_dir is not None:
-                env['CEDAR_BASE_DIR'] = cedar_base_dir
+                env['CEDAR_BASE_DIR'] = os.path.abspath(cedar_base_dir)
             # 启动脚本进程
-            if is_compiled_script(script_path):
-                # 对于编译后的 .so 文件，使用 Python 模块导入方式执行
+            if script_path.endswith(('.so', '.pyd')):
+                # 对于编译后的文件，使用 Python 模块导入方式执行
+                # 需要先切换到脚本目录，然后导入模块
+                script_dir_escaped = os.path.abspath(script_dir).replace('\\', '\\\\')
+                config_file_escaped = os.path.abspath(config_file.name).replace('\\', '\\\\')
+                
                 cmd = ["python", "-c", f"""
 import sys
 import os
-sys.path.insert(0, '{script_dir}')
-import main
-if __name__ == '__main__':
-    main.main()
-""", config_file.name]
+os.chdir('{script_dir_escaped}')
+sys.path.insert(0, '{script_dir_escaped}')
+
+try:
+    import main
+    if hasattr(main, 'main'):
+        # 设置配置文件路径环境变量
+        os.environ['SCRIPT_CONFIG_FILE'] = '{config_file_escaped}'
+        # 尝试不同的main函数调用方式
+        try:
+            # 首先尝试传入配置文件路径
+            main.main('{config_file_escaped}')
+        except TypeError:
+            # 如果main函数不接受参数，则不传递参数
+            main.main()
+    else:
+        print("脚本模块已加载，但未找到main函数")
+except Exception as e:
+    print(f"执行编译脚本时出错: {{e}}")
+    sys.exit(1)
+"""]
             else:
                 # 对于 .py 文件，直接执行
                 cmd = ["python", script_path, config_file.name]

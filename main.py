@@ -17,11 +17,11 @@ from typing import Dict, Any
 from cedar.utils import print
 
 
-SCRIPTS_DIR = "scripts"
-CONFIGS_DIR = "configs"
-LOG_FILE = "log/app.log"
-os.environ["LOG_PATH"] = LOG_FILE
 CEDAR_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPTS_DIR = os.path.abspath("scripts")
+CONFIGS_DIR = os.path.abspath("configs")
+LOG_FILE = os.path.abspath("log/app.log")
+os.environ["LOG_PATH"] = LOG_FILE
 
 def get_tree_item_path(item):
     """递归获取树节点完整路径"""
@@ -38,31 +38,33 @@ def is_safe_script_path(base_dir, script_path):
     return abs_script.startswith(abs_base)
 
 def has_script_file(script_dir):
-    """检查脚本目录中是否有可执行的脚本文件（.py 或 .so）"""
+    """检查脚本目录中是否有可执行的脚本文件（.py、.so 或 .pyd）"""
     if not os.path.isdir(script_dir):
         return False
     
-    # 检查是否有 main.py 或 main.cpython-*.so 文件
+    # 检查是否有 main.py 文件
     main_py = os.path.join(script_dir, "main.py")
     if os.path.exists(main_py):
         return True
     
-    # 检查是否有编译后的 .so 文件
+    # 检查是否有编译后的文件 (.so 或 .pyd)
     for file in os.listdir(script_dir):
-        if file.startswith("main.cpython-") and file.endswith(".so"):
+        if ((file.startswith("main.cpython-") or file.startswith("main.cp")) and 
+            (file.endswith(".so") or file.endswith(".pyd"))):
             return True
     
     return False
 
 def get_script_file_path(script_dir):
-    """获取脚本文件的路径（.py 或 .so）"""
+    """获取脚本文件的路径（.py、.so 或 .pyd）"""
     main_py = os.path.join(script_dir, "main.py")
     if os.path.exists(main_py):
         return main_py
     
-    # 查找编译后的 .so 文件
+    # 查找编译后的文件 (.so 或 .pyd)
     for file in os.listdir(script_dir):
-        if file.startswith("main.cpython-") and file.endswith(".so"):
+        if ((file.startswith("main.cpython-") or file.startswith("main.cp")) and 
+            (file.endswith(".so") or file.endswith(".pyd"))):
             return os.path.join(script_dir, file)
     
     return None
@@ -224,7 +226,7 @@ class ScriptExecutorUI(QMainWindow):
 
     def init_log_offsets(self) -> None:
         """初始化日志文件偏移量，只记录启动时已有内容"""
-        log_dir = os.path.join(os.getcwd(), "log")
+        log_dir = os.path.abspath("log")
         if not os.path.exists(log_dir):
             print("[提示] 日志目录不存在")
             self.append_log("[提示] 日志目录不存在")
@@ -290,16 +292,16 @@ class ScriptExecutorUI(QMainWindow):
             self.run_btn.hide()
             return
         script_name = path_parts[-1]
-        script_dir = os.path.join(SCRIPTS_DIR, *path_parts)
+        script_dir = os.path.abspath(os.path.join(SCRIPTS_DIR, *path_parts))
         if not has_script_file(script_dir):
             self.config_label.hide()
             self.doc_label.hide()
             self.clear_form()
             self.run_btn.hide()
             return
-        config_path = os.path.join(CONFIGS_DIR, f"{script_name}.json")
-        yaml_path = os.path.join(script_dir, "form.yaml")
-        doc_path = os.path.join(script_dir, "README.md")
+        config_path = os.path.abspath(os.path.join(CONFIGS_DIR, f"{script_name}.json"))
+        yaml_path = os.path.abspath(os.path.join(script_dir, "form.yaml"))
+        doc_path = os.path.abspath(os.path.join(script_dir, "README.md"))
         if os.path.exists(doc_path):
             with open(doc_path, "r", encoding="utf-8") as f:
                 doc_content = f.read().strip()
@@ -362,7 +364,7 @@ class ScriptExecutorUI(QMainWindow):
             QMessageBox.warning(self, "提示", "请先选择一个脚本")
             return
         script_rel_path = os.path.join(*path_parts)
-        config_path = os.path.join(CONFIGS_DIR, f"{path_parts[-1]}.json")
+        config_path = os.path.abspath(os.path.join(CONFIGS_DIR, f"{path_parts[-1]}.json"))
         if not is_safe_script_path(SCRIPTS_DIR, script_rel_path):
             QMessageBox.critical(self, "错误", "非法脚本路径")
             return
@@ -414,7 +416,7 @@ class ScriptExecutorUI(QMainWindow):
         event.accept()
 
     def monitor_log_dir(self) -> None:
-        log_dir = os.path.join(os.getcwd(), "log")
+        log_dir = os.path.abspath("log")
         if not os.path.exists(log_dir):
             print("[提示] 日志目录不存在")
             self.append_log("[提示] 日志目录不存在")
