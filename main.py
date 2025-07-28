@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QSplitter, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox, QDateEdit
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QIcon
 
 from app_ui.ScriptExecutor import ScriptExecutor
 from app_ui.FormBuilder import FormBuilder
@@ -113,6 +113,12 @@ class ScriptExecutorUI(QMainWindow):
         super().__init__()
         self.setWindowTitle("脚本执行器")
         self.resize(1200, 800)
+        
+        # 设置窗口图标
+        icon_path = os.path.join(CEDAR_BASE_DIR, "app_ui", "icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
         self.set_global_font()
 
         self.script_executor = ScriptExecutor(SCRIPTS_DIR)
