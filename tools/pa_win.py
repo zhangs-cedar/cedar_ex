@@ -9,9 +9,12 @@ import sys
 import shutil
 import subprocess
 import time
+import argparse
+import zipfile
 from pathlib import Path
+from datetime import datetime
 
-def run_cmd(cmd, check=True, show_output=False):
+def run_cmd(cmd, check=True):
     """运行命令"""
     print(f"执行: {' '.join(cmd)}")
     start_time = time.time()
@@ -43,7 +46,31 @@ def count_python_files(directory):
             count += 1
     return count
 
+def create_zip_archive(source_dir, output_name):
+    """创建压缩包"""
+    print(f"步骤 8/8: 创建压缩包 {output_name}...")
+    
+    with zipfile.ZipFile(output_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(source_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, source_dir)
+                zipf.write(file_path, arcname)
+                print(f"  ✓ 添加: {arcname}")
+    
+    # 获取压缩包大小
+    zip_size = os.path.getsize(output_name) / (1024 * 1024)  # MB
+    print(f"  ✓ 压缩包创建完成: {output_name} ({zip_size:.1f} MB)")
+
 def main():
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='Cedar Ex 轻量化打包工具 (Windows版本)')
+    parser.add_argument('--no-venv', action='store_true', 
+                       help='不复制虚拟环境，只打包源码')
+    parser.add_argument('--no-compress', action='store_true',
+                       help='不创建压缩包')
+    args = parser.parse_args()
+    
     # 配置
     # 从 tools 目录运行时，项目根目录是上级目录
     script_dir = Path(__file__).parent
@@ -59,6 +86,9 @@ def main():
     print("=" * 60)
     print("Cedar Ex 轻量化打包工具 (Windows版本)")
     print("=" * 60)
+    print(f"虚拟环境复制: {'否' if args.no_venv else '是'}")
+    print(f"创建压缩包: {'否' if args.no_compress else '是'}")
+    print("-" * 60)
     
     # 统计文件数量
     app_ui_files = count_python_files(project_root / "app_ui")
@@ -100,7 +130,7 @@ def main():
                 "--module",
                 f"--output-dir={app_ui_dir}",
                 str(py_file)
-            ], show_output=False)
+            ])
         
         # 构建 scripts 模块
         print(f"步骤 3/7: 构建 scripts 模块 ({scripts_files} 个文件)...")
@@ -120,7 +150,7 @@ def main():
                         "--module",
                         f"--output-dir={dst_path}",
                         str(item)
-                    ], show_output=False)
+                    ])
                 elif item.is_dir():
                     build_scripts_recursive(item, dst_path / item.name, current_count)
                 elif item.is_file():
@@ -136,26 +166,32 @@ def main():
             "--module",
             f"--output-dir={dist_dir}",
             str(project_root / "main.py")
-        ], show_output=False)
+        ])
         
-        # 复制虚拟环境
-        print("步骤 5/7: 复制虚拟环境...")
-        venv_dir = dist_dir / "my_venv"
-        shutil.copytree(conda_env, venv_dir)
-        print("  ✓ 虚拟环境复制完成")
-        
-        # 清理虚拟环境
-        print("步骤 6/7: 清理虚拟环境...")
-        cleaned_files = 0
-        for pattern in ["__pycache__", "*.pyc", "*.pyo"]:
-            for path in venv_dir.rglob(pattern):
-                if path.is_dir():
-                    shutil.rmtree(path)
-                    cleaned_files += 1
-                else:
-                    path.unlink()
-                    cleaned_files += 1
-        print(f"  ✓ 清理了 {cleaned_files} 个缓存文件")
+        # 复制虚拟环境（可选）
+        if not args.no_venv:
+            print("步骤 5/7: 复制虚拟环境...")
+            venv_dir = dist_dir / "my_venv"
+            shutil.copytree(conda_env, venv_dir)
+            print("  ✓ 虚拟环境复制完成")
+            
+            # 清理虚拟环境
+            print("步骤 6/7: 清理虚拟环境...")
+            cleaned_files = 0
+            for pattern in ["__pycache__", "*.pyc", "*.pyo"]:
+                for path in venv_dir.rglob(pattern):
+                    if path.is_dir():
+                        shutil.rmtree(path)
+                        cleaned_files += 1
+                    else:
+                        path.unlink()
+                        cleaned_files += 1
+            print(f"  ✓ 清理了 {cleaned_files} 个缓存文件")
+        else:
+            print("步骤 5/7: 跳过虚拟环境复制...")
+            print("  ✓ 已跳过虚拟环境复制")
+            print("步骤 6/7: 跳过虚拟环境清理...")
+            print("  ✓ 已跳过虚拟环境清理")
         
         # 复制额外文件
         print("步骤 7/7: 复制额外文件...")
@@ -167,15 +203,27 @@ def main():
         
         # 创建启动脚本 (Windows批处理文件)
         run_script = dist_dir / "run.bat"
-        with open(run_script, "w", encoding="utf-8") as f:
-            f.write("""@echo off
+
+        # 使用虚拟环境中的Python
+        script_content = """@echo off
 REM 设置 Python 环境
-set PYTHONPATH=%CD%\\app_ui;%CD%\\scripts;%PYTHONPATH%
+set PYTHONPATH=%CD%/app_ui;%CD%/scripts;%PYTHONPATH%
 REM 使用虚拟环境中的 Python 运行主程序
-"%CD%\\my_venv\\python.exe" -c "import sys; import os; sys.path.insert(0, '%CD%'); import main; from PyQt5.QtWidgets import QApplication; app = QApplication(sys.argv); from main import ScriptExecutorUI; win = ScriptExecutorUI(); win.show(); sys.exit(app.exec_())"
+"%CD%/my_venv/python.exe" -c "import sys; import os; sys.path.insert(0, r'%CD%'); import main; from PyQt5.QtWidgets import QApplication; app = QApplication(sys.argv); from main import ScriptExecutorUI; win = ScriptExecutorUI(); win.show(); sys.exit(app.exec_())"
 pause
-""")
+"""
+
+        
+        with open(run_script, "w", encoding="utf-8") as f:
+            f.write(script_content)
         print("  ✓ 创建启动脚本")
+        
+        # 创建压缩包（可选）
+        if not args.no_compress:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            zip_name = f"cedar_ex_{timestamp}.zip"
+            zip_path = project_root / "dist" / zip_name
+            create_zip_archive(dist_dir, zip_path)
         
         total_time = time.time() - start_time
         
@@ -183,6 +231,8 @@ pause
         print("🎉 打包完成！")
         print("=" * 60)
         print(f"输出目录: {dist_dir}")
+        if not args.no_compress:
+            print(f"压缩包: {zip_path}")
         print(f"总耗时: {total_time:.1f} 秒")
         print(f"平均每个文件: {total_time/total_files:.1f} 秒")
         print("\n运行方式:")
