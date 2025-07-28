@@ -48,7 +48,7 @@ def count_python_files(directory):
 
 def create_zip_archive(source_dir, output_name):
     """创建压缩包"""
-    print(f"步骤 8/8: 创建压缩包 {output_name}...")
+    print(f"步骤 9/9: 创建压缩包 {output_name}...")
     
     with zipfile.ZipFile(output_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(source_dir):
@@ -115,7 +115,7 @@ def main():
         print("  ✓ 清理完成")
         
         # 构建 app_ui 模块
-        print(f"步骤 2/7: 构建 app_ui 模块 ({app_ui_files} 个文件)...")
+        print(f"步骤 2/8: 构建 app_ui 模块 ({app_ui_files} 个文件)...")
         app_ui_dir = dist_dir / "app_ui"
         app_ui_dir.mkdir()
         
@@ -133,7 +133,7 @@ def main():
             ])
         
         # 构建 scripts 模块
-        print(f"步骤 3/7: 构建 scripts 模块 ({scripts_files} 个文件)...")
+        print(f"步骤 3/8: 构建 scripts 模块 ({scripts_files} 个文件)...")
         scripts_dir = dist_dir / "scripts"
         
         def build_scripts_recursive(src_path, dst_path, current_count):
@@ -160,7 +160,7 @@ def main():
         build_scripts_recursive(project_root / "scripts", scripts_dir, current_count)
         
         # 构建主程序
-        print("步骤 4/7: 构建主程序...")
+        print("步骤 4/8: 构建主程序...")
         run_cmd([
             python_exe, "-m", "nuitka",
             "--module",
@@ -170,13 +170,13 @@ def main():
         
         # 复制虚拟环境（可选）
         if not args.no_venv:
-            print("步骤 5/7: 复制虚拟环境...")
+            print("步骤 5/8: 复制虚拟环境...")
             venv_dir = dist_dir / "my_venv"
             shutil.copytree(conda_env, venv_dir)
             print("  ✓ 虚拟环境复制完成")
             
             # 清理虚拟环境
-            print("步骤 6/7: 清理虚拟环境...")
+            print("步骤 6/8: 清理虚拟环境...")
             cleaned_files = 0
             for pattern in ["__pycache__", "*.pyc", "*.pyo"]:
                 for path in venv_dir.rglob(pattern):
@@ -188,20 +188,30 @@ def main():
                         cleaned_files += 1
             print(f"  ✓ 清理了 {cleaned_files} 个缓存文件")
         else:
-            print("步骤 5/7: 跳过虚拟环境复制...")
+            print("步骤 5/8: 跳过虚拟环境复制...")
             print("  ✓ 已跳过虚拟环境复制")
-            print("步骤 6/7: 跳过虚拟环境清理...")
+            print("步骤 6/8: 跳过虚拟环境清理...")
             print("  ✓ 已跳过虚拟环境清理")
         
         # 复制额外文件
-        print("步骤 7/7: 复制额外文件...")
+        print("步骤 7/8: 复制额外文件...")
         for extra_dir in ["configs", "log"]:
             src = project_root / extra_dir
             if src.exists():
                 shutil.copytree(src, dist_dir / extra_dir)
                 print(f"  ✓ 复制 {extra_dir} 目录")
         
+        # 复制图标文件
+        icon_src = project_root / "app_ui" / "icon.ico"
+        if icon_src.exists():
+            icon_dst = dist_dir / "icon.ico"
+            shutil.copy2(icon_src, icon_dst)
+            print(f"  ✓ 复制图标文件: icon.ico")
+        else:
+            print(f"  ⚠ 图标文件不存在: {icon_src}")
+        
         # 创建启动脚本 (Windows批处理文件)
+        print("步骤 8/8: 创建启动脚本...")
         run_script = dist_dir / "run.bat"
 
         # 使用虚拟环境中的Python
@@ -216,7 +226,16 @@ pause
         
         with open(run_script, "w", encoding="utf-8") as f:
             f.write(script_content)
-        print("  ✓ 创建启动脚本")
+        print("  ✓ 创建启动脚本: run.bat")
+        
+        # 创建 VBS 启动脚本 (无窗口运行)
+        run_vbs_script = dist_dir / "run.vbs"
+        vbs_content = '''Set ws = CreateObject("WScript.Shell")
+ws.Run "run.bat", 0'''
+        
+        with open(run_vbs_script, "w", encoding="utf-8") as f:
+            f.write(vbs_content)
+        print("  ✓ 创建启动脚本: run.vbs")
         
         # 创建压缩包（可选）
         if not args.no_compress:
@@ -237,7 +256,7 @@ pause
         print(f"平均每个文件: {total_time/total_files:.1f} 秒")
         print("\n运行方式:")
         print(f"  cd {dist_dir}")
-        print("  run.bat")
+        print("  run.bat 或 run.vbs 运行")
         print("=" * 60)
         
     except Exception as e:
