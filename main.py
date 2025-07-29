@@ -16,7 +16,47 @@ from app_ui.FormBuilder import FormBuilder
 from typing import Dict, Any
 from cedar.utils import print
 
+# ==================== 全局配置参数 ====================
+# 窗口配置
+WINDOW_TITLE = "脚本执行器"
+WINDOW_WIDTH = 1400
+WINDOW_HEIGHT = 1200
+WINDOW_MIN_WIDTH = 1200
+WINDOW_MIN_HEIGHT = 1000
 
+# 字体配置
+FONT_SIZE = 12
+FONT_FAMILY = "Microsoft YaHei"
+
+# 布局配置
+MAIN_MARGIN = 16
+MAIN_SPACING = 8
+PANEL_SPACING = 8
+FORM_SPACING = 12
+FORM_HORIZONTAL_SPACING = 18
+FORM_VERTICAL_SPACING = 8
+
+# 脚本树配置
+SCRIPT_TREE_MIN_WIDTH = 400
+SCRIPT_TREE_MAX_WIDTH = 600
+SCRIPT_TREE_TITLE = "可用脚本"
+
+# 分割器配置
+H_SPLITTER_SIZES = [300, 900]  # 左右分割比例
+MAIN_SPLITTER_SIZES = [700, 200]  # 上下分割比例
+
+# 日志监控配置
+LOG_MONITOR_INTERVAL = 200  # 毫秒
+
+# 按钮文本
+RUN_BUTTON_TEXT = "运行脚本"
+RUNNING_BUTTON_TEXT = "运行中..."
+
+# 分组框标题
+PARAM_GROUP_TITLE = "配置参数"
+LOG_GROUP_TITLE = "日志输出"
+
+# ==================== 路径配置 ====================
 CEDAR_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.abspath("scripts")
 CONFIGS_DIR = os.path.abspath("configs")
@@ -111,8 +151,8 @@ class ScriptExecutorUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("脚本执行器")
-        self.resize(1200, 800)
+        self.setWindowTitle(WINDOW_TITLE)
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         
         # 设置窗口图标
         icon_path = os.path.join(CEDAR_BASE_DIR, "app_ui", "icon.ico")
@@ -134,11 +174,13 @@ class ScriptExecutorUI(QMainWindow):
         self.log_monitor_timer: QTimer = QTimer(self)
         self.log_monitor_timer.timeout.connect(self.monitor_log_dir)
         self.init_log_offsets()
-        self.log_monitor_timer.start(1000)
+        self.log_monitor_timer.start(LOG_MONITOR_INTERVAL)
 
     def set_global_font(self) -> None:
         font = QFont()
-        font.setPointSize(12)
+        font.setPointSize(FONT_SIZE)
+        if FONT_FAMILY:
+            font.setFamily(FONT_FAMILY)
         QApplication.setFont(font)
 
     def append_log(self, msg: str) -> None:
@@ -152,20 +194,20 @@ class ScriptExecutorUI(QMainWindow):
     def init_ui(self):
         main_widget = QWidget()
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(16, 12, 16, 12)
-        main_layout.setSpacing(8)
+        main_layout.setContentsMargins(MAIN_MARGIN, MAIN_MARGIN, MAIN_MARGIN, MAIN_MARGIN)
+        main_layout.setSpacing(MAIN_SPACING)
         main_splitter = QSplitter(Qt.Vertical)
         h_splitter = QSplitter(Qt.Horizontal)
         # 左侧：脚本树卡片
         left_panel = QVBoxLayout()
-        left_panel.setSpacing(8)
-        script_title = QLabel("可用脚本")
+        left_panel.setSpacing(PANEL_SPACING)
+        script_title = QLabel(SCRIPT_TREE_TITLE)
         script_title.setStyleSheet("margin-bottom: 8px;")
         left_panel.addWidget(script_title)
         self.script_tree = QTreeWidget()
         self.script_tree.setHeaderHidden(True)
-        self.script_tree.setMinimumWidth(250)
-        self.script_tree.setMaximumWidth(350)
+        self.script_tree.setMinimumWidth(SCRIPT_TREE_MIN_WIDTH)
+        self.script_tree.setMaximumWidth(SCRIPT_TREE_MAX_WIDTH)
         self.script_tree.itemSelectionChanged.connect(self.on_script_selected)
         left_panel.addWidget(self.script_tree)
         left_widget = QWidget()
@@ -173,8 +215,8 @@ class ScriptExecutorUI(QMainWindow):
         h_splitter.addWidget(left_widget)
         # 右侧：仅配置参数卡片
         right_panel = QVBoxLayout()
-        right_panel.setSpacing(12)
-        param_group = QGroupBox("配置参数")
+        right_panel.setSpacing(FORM_SPACING)
+        param_group = QGroupBox(PARAM_GROUP_TITLE)
         param_layout = QVBoxLayout()
         self.doc_label = QLabel()
         self.doc_label.setWordWrap(True)
@@ -186,8 +228,8 @@ class ScriptExecutorUI(QMainWindow):
         self.form_layout = QFormLayout()
         self.form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.form_layout.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)
-        self.form_layout.setHorizontalSpacing(18)
-        self.form_layout.setVerticalSpacing(8)
+        self.form_layout.setHorizontalSpacing(FORM_HORIZONTAL_SPACING)
+        self.form_layout.setVerticalSpacing(FORM_VERTICAL_SPACING)
         self.form_widget = QWidget()
         self.form_widget.setLayout(self.form_layout)
         scroll = QScrollArea()
@@ -195,7 +237,7 @@ class ScriptExecutorUI(QMainWindow):
         scroll.setWidget(self.form_widget)
         param_layout.addWidget(scroll)
         btn_layout = QHBoxLayout()
-        self.run_btn = QPushButton("运行脚本")
+        self.run_btn = QPushButton(RUN_BUTTON_TEXT)
         self.run_btn.clicked.connect(self.run_script)
         self.run_btn.hide()
         btn_layout.addStretch(1)
@@ -207,7 +249,7 @@ class ScriptExecutorUI(QMainWindow):
         right_widget = QWidget()
         right_widget.setLayout(right_panel)
         h_splitter.addWidget(right_widget)
-        h_splitter.setSizes([300, 900])
+        h_splitter.setSizes(H_SPLITTER_SIZES)
         main_splitter.addWidget(h_splitter)
         # 日志区
         log_panel = QVBoxLayout()
@@ -215,7 +257,7 @@ class ScriptExecutorUI(QMainWindow):
         log_frame.setFrameShape(QFrame.HLine)
         log_frame.setFrameShadow(QFrame.Sunken)
         log_panel.addWidget(log_frame)
-        log_group = QGroupBox("日志输出")
+        log_group = QGroupBox(LOG_GROUP_TITLE)
         log_layout = QVBoxLayout()
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
@@ -225,7 +267,7 @@ class ScriptExecutorUI(QMainWindow):
         log_widget = QWidget()
         log_widget.setLayout(log_panel)
         main_splitter.addWidget(log_widget)
-        main_splitter.setSizes([700, 200])
+        main_splitter.setSizes(MAIN_SPLITTER_SIZES)
         main_layout.addWidget(main_splitter)
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
@@ -393,7 +435,7 @@ class ScriptExecutorUI(QMainWindow):
         self.append_log(f"脚本开始执行: {script_name}")
         self.run_btn.setEnabled(False)
         self.form_widget.setEnabled(False)
-        self.run_btn.setText("运行中...")
+        self.run_btn.setText(RUNNING_BUTTON_TEXT)
 
     def on_script_finished(self, exit_code: int) -> None:
         if exit_code == 0:
@@ -404,7 +446,7 @@ class ScriptExecutorUI(QMainWindow):
             self.append_log(f"脚本执行失败，退出码: {exit_code}")
         self.run_btn.setEnabled(True)
         self.form_widget.setEnabled(True)
-        self.run_btn.setText("运行脚本")
+        self.run_btn.setText(RUN_BUTTON_TEXT)
 
     def on_script_error(self, error_msg: str) -> None:
         print(f"脚本执行错误: {error_msg}")
@@ -412,7 +454,7 @@ class ScriptExecutorUI(QMainWindow):
         QMessageBox.critical(self, "错误", f"脚本执行错误: {error_msg}")
         self.run_btn.setEnabled(True)
         self.form_widget.setEnabled(True)
-        self.run_btn.setText("运行脚本")
+        self.run_btn.setText(RUN_BUTTON_TEXT)
 
     def closeEvent(self, event) -> None:
         if hasattr(self, 'script_executor'):
