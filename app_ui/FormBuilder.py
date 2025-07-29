@@ -1,5 +1,5 @@
 import yaml
-from typing import Dict, Any, List
+from typing import Dict, Any
 from PyQt5.QtWidgets import (QLineEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox, QPushButton, QHBoxLayout, QWidget, QDateEdit, QFileDialog, QFormLayout)
 from PyQt5.QtCore import QDate
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem
@@ -10,23 +10,18 @@ class FormBuilder:
         self.parent = parent
 
     def build_form(self, form_layout: QFormLayout, yaml_path: str) -> Dict[str, Any]:
-        """
-        根据 YAML 配置生成表单控件
-        Args:
-            form_layout: QFormLayout 实例
-            yaml_path: YAML 配置文件路径
-        Returns:
-            字段名到控件的映射
-        """
+        """根据 YAML 配置生成表单控件"""
         form_fields = {}
         with open(yaml_path, "r", encoding="utf-8") as f:
             form_cfg = yaml.safe_load(f)
+            
         for field in form_cfg.get("fields", []):
             name = field["name"]
             label = field.get("label", name)
             ftype = field.get("type", "text")
             default = field.get("default", "")
             widget = None
+            
             if ftype == "text":
                 widget = QLineEdit()
                 widget.setText(str(default))
@@ -78,7 +73,7 @@ class FormBuilder:
                 btn.setMinimumHeight(28)
                 def choose_file(w):
                     path, _ = QFileDialog.getOpenFileName(self.parent, "选择文件")
-                    if path and isinstance(path, str):
+                    if path:
                         w.setText(path)
                 btn.clicked.connect(lambda _, w=widget: choose_file(w))
                 file_layout = QHBoxLayout()
@@ -99,7 +94,7 @@ class FormBuilder:
                 btn.setMinimumHeight(28)
                 def choose_dir(w):
                     path = QFileDialog.getExistingDirectory(self.parent, "选择目录")
-                    if path and isinstance(path, str):
+                    if path:
                         w.setText(path)
                 btn.clicked.connect(lambda _, w=widget: choose_dir(w))
                 dir_layout = QHBoxLayout()
@@ -124,7 +119,6 @@ class FormBuilder:
                 else:
                     widget.setDate(QDate.currentDate())
             elif ftype == "doc":
-                # 只读文档说明，使用QLabel或QTextEdit
                 doc_content = field.get("content", "")
                 doc_widget = QTextEdit()
                 doc_widget.setReadOnly(True)
@@ -132,7 +126,9 @@ class FormBuilder:
                 doc_widget.setMinimumHeight(60)
                 form_layout.addRow(label, doc_widget)
                 continue
+                
             if widget:
                 form_layout.addRow(label, widget)
                 form_fields[name] = widget
+                
         return form_fields 

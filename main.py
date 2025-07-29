@@ -16,47 +16,15 @@ from app_ui.FormBuilder import FormBuilder
 from typing import Dict, Any
 from cedar.utils import print
 
-# ==================== 全局配置参数 ====================
-# 窗口配置
+# ==================== 配置参数 ====================
 WINDOW_TITLE = "脚本执行器"
 WINDOW_WIDTH = 1400
 WINDOW_HEIGHT = 1200
-WINDOW_MIN_WIDTH = 1200
-WINDOW_MIN_HEIGHT = 1000
-
-# 字体配置
 FONT_SIZE = 12
 FONT_FAMILY = "Microsoft YaHei"
+LOG_MONITOR_INTERVAL = 200
 
-# 布局配置
-MAIN_MARGIN = 16
-MAIN_SPACING = 8
-PANEL_SPACING = 8
-FORM_SPACING = 12
-FORM_HORIZONTAL_SPACING = 18
-FORM_VERTICAL_SPACING = 8
-
-# 脚本树配置
-SCRIPT_TREE_MIN_WIDTH = 400
-SCRIPT_TREE_MAX_WIDTH = 600
-SCRIPT_TREE_TITLE = "可用脚本"
-
-# 分割器配置
-H_SPLITTER_SIZES = [300, 900]  # 左右分割比例
-MAIN_SPLITTER_SIZES = [700, 200]  # 上下分割比例
-
-# 日志监控配置
-LOG_MONITOR_INTERVAL = 200  # 毫秒
-
-# 按钮文本
-RUN_BUTTON_TEXT = "运行脚本"
-RUNNING_BUTTON_TEXT = "运行中..."
-
-# 分组框标题
-PARAM_GROUP_TITLE = "配置参数"
-LOG_GROUP_TITLE = "日志输出"
-
-# ==================== 路径配置 ====================
+# 路径配置
 CEDAR_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.abspath("scripts")
 CONFIGS_DIR = os.path.abspath("configs")
@@ -64,78 +32,42 @@ LOG_FILE = os.path.abspath("log/app.log")
 os.environ["LOG_PATH"] = LOG_FILE
 
 def get_tree_item_path(item):
-    """递归获取树节点完整路径"""
+    """获取树节点完整路径"""
     path_parts = []
     while item:
         path_parts.insert(0, item.text(0))
         item = item.parent()
     return path_parts
 
-def is_safe_script_path(base_dir, script_path):
-    """校验脚本路径合法性，防止路径穿越"""
-    abs_base = os.path.abspath(base_dir)
-    abs_script = os.path.abspath(os.path.join(base_dir, script_path))
-    return abs_script.startswith(abs_base)
-
 def has_script_file(script_dir):
-    """检查脚本目录中是否有可执行的脚本文件（.py、.so 或 .pyd）"""
+    """检查脚本目录中是否有可执行的脚本文件"""
     if not os.path.isdir(script_dir):
         return False
     
-    # 检查是否有 main.py 文件
     main_py = os.path.join(script_dir, "main.py")
     if os.path.exists(main_py):
         return True
     
-    # 检查是否有编译后的文件 (.so 或 .pyd)
     for file in os.listdir(script_dir):
         if ((file.startswith("main.cpython-") or file.startswith("main.cp")) and 
             (file.endswith(".so") or file.endswith(".pyd"))):
             return True
     
     return False
-
-def get_script_file_path(script_dir):
-    """获取脚本文件的路径（.py、.so 或 .pyd）"""
-    main_py = os.path.join(script_dir, "main.py")
-    if os.path.exists(main_py):
-        return main_py
-    
-    # 查找编译后的文件 (.so 或 .pyd)
-    for file in os.listdir(script_dir):
-        if ((file.startswith("main.cpython-") or file.startswith("main.cp")) and 
-            (file.endswith(".so") or file.endswith(".pyd"))):
-            return os.path.join(script_dir, file)
-    
-    return None
 
 def should_skip_directory(dir_name):
     """判断是否应该跳过某个目录"""
     skip_patterns = [
-        ".build",           # Nuitka 构建目录
-        "build",            # 构建目录
-        "__pycache__",      # Python 缓存目录
-        ".git",             # Git 目录
-        ".svn",             # SVN 目录
-        ".hg",              # Mercurial 目录
-        "node_modules",     # Node.js 模块目录
-        ".vscode",          # VS Code 配置目录
-        ".idea",            # IntelliJ 配置目录
+        ".build", "__pycache__", ".git", ".svn", ".hg", 
+        "node_modules", ".vscode", ".idea"
     ]
     
-    # 检查精确匹配
-    for pattern in skip_patterns:
-        if dir_name == pattern:
-            return True
-    
-    # 检查以 .build 结尾的目录
-    if dir_name.endswith(".build"):
+    if dir_name in skip_patterns or dir_name.endswith(".build"):
         return True
-    
     return False
 
 def has_valid_subdirs(dir_path):
-    """检查目录是否有有效的子目录（排除构建目录）"""
+    """检查目录是否有有效的子目录"""
     try:
         for entry in os.listdir(dir_path):
             entry_path = os.path.join(dir_path, entry)
@@ -167,23 +99,25 @@ class ScriptExecutorUI(QMainWindow):
         self.script_executor.script_started.connect(self.on_script_started)
         self.script_executor.script_finished.connect(self.on_script_finished)
         self.script_executor.script_error.connect(self.on_script_error)
+        
         self.init_ui()
         self.load_scripts()
+        
         self.log_signal.connect(self.append_log)
         self.log_file_offsets: Dict[str, int] = {}
-        self.log_monitor_timer: QTimer = QTimer(self)
+        self.log_monitor_timer = QTimer(self)
         self.log_monitor_timer.timeout.connect(self.monitor_log_dir)
         self.init_log_offsets()
         self.log_monitor_timer.start(LOG_MONITOR_INTERVAL)
 
-    def set_global_font(self) -> None:
+    def set_global_font(self):
         font = QFont()
         font.setPointSize(FONT_SIZE)
         if FONT_FAMILY:
             font.setFamily(FONT_FAMILY)
         QApplication.setFont(font)
 
-    def append_log(self, msg: str) -> None:
+    def append_log(self, msg: str):
         self.log_text.append(msg)
         QTimer.singleShot(0, self._scroll_log_to_end)
 
@@ -194,91 +128,109 @@ class ScriptExecutorUI(QMainWindow):
     def init_ui(self):
         main_widget = QWidget()
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(MAIN_MARGIN, MAIN_MARGIN, MAIN_MARGIN, MAIN_MARGIN)
-        main_layout.setSpacing(MAIN_SPACING)
+        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setSpacing(8)
+        
         main_splitter = QSplitter(Qt.Vertical)
         h_splitter = QSplitter(Qt.Horizontal)
-        # 左侧：脚本树卡片
+        
+        # 左侧：脚本树
         left_panel = QVBoxLayout()
-        left_panel.setSpacing(PANEL_SPACING)
-        script_title = QLabel(SCRIPT_TREE_TITLE)
+        left_panel.setSpacing(8)
+        script_title = QLabel("可用脚本")
         script_title.setStyleSheet("margin-bottom: 8px;")
         left_panel.addWidget(script_title)
+        
         self.script_tree = QTreeWidget()
         self.script_tree.setHeaderHidden(True)
-        self.script_tree.setMinimumWidth(SCRIPT_TREE_MIN_WIDTH)
-        self.script_tree.setMaximumWidth(SCRIPT_TREE_MAX_WIDTH)
+        self.script_tree.setMinimumWidth(400)
+        self.script_tree.setMaximumWidth(600)
         self.script_tree.itemSelectionChanged.connect(self.on_script_selected)
         left_panel.addWidget(self.script_tree)
+        
         left_widget = QWidget()
         left_widget.setLayout(left_panel)
         h_splitter.addWidget(left_widget)
-        # 右侧：仅配置参数卡片
+        
+        # 右侧：配置参数
         right_panel = QVBoxLayout()
-        right_panel.setSpacing(FORM_SPACING)
-        param_group = QGroupBox(PARAM_GROUP_TITLE)
+        right_panel.setSpacing(12)
+        param_group = QGroupBox("配置参数")
         param_layout = QVBoxLayout()
+        
         self.doc_label = QLabel()
         self.doc_label.setWordWrap(True)
         self.doc_label.hide()
         param_layout.addWidget(self.doc_label)
+        
         self.config_label = QLabel()
         self.config_label.hide()
         param_layout.addWidget(self.config_label)
+        
         self.form_layout = QFormLayout()
         self.form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.form_layout.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)
-        self.form_layout.setHorizontalSpacing(FORM_HORIZONTAL_SPACING)
-        self.form_layout.setVerticalSpacing(FORM_VERTICAL_SPACING)
+        self.form_layout.setHorizontalSpacing(18)
+        self.form_layout.setVerticalSpacing(8)
+        
         self.form_widget = QWidget()
         self.form_widget.setLayout(self.form_layout)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(self.form_widget)
         param_layout.addWidget(scroll)
+        
         btn_layout = QHBoxLayout()
-        self.run_btn = QPushButton(RUN_BUTTON_TEXT)
+        self.run_btn = QPushButton("运行脚本")
         self.run_btn.clicked.connect(self.run_script)
         self.run_btn.hide()
         btn_layout.addStretch(1)
         btn_layout.addWidget(self.run_btn)
         btn_layout.addStretch(1)
         param_layout.addLayout(btn_layout)
+        
         param_group.setLayout(param_layout)
         right_panel.addWidget(param_group)
+        
         right_widget = QWidget()
         right_widget.setLayout(right_panel)
         h_splitter.addWidget(right_widget)
-        h_splitter.setSizes(H_SPLITTER_SIZES)
+        h_splitter.setSizes([300, 900])
+        
         main_splitter.addWidget(h_splitter)
+        
         # 日志区
         log_panel = QVBoxLayout()
         log_frame = QFrame()
         log_frame.setFrameShape(QFrame.HLine)
         log_frame.setFrameShadow(QFrame.Sunken)
         log_panel.addWidget(log_frame)
-        log_group = QGroupBox(LOG_GROUP_TITLE)
+        
+        log_group = QGroupBox("日志输出")
         log_layout = QVBoxLayout()
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         log_layout.addWidget(self.log_text)
         log_group.setLayout(log_layout)
         log_panel.addWidget(log_group)
+        
         log_widget = QWidget()
         log_widget.setLayout(log_panel)
         main_splitter.addWidget(log_widget)
-        main_splitter.setSizes(MAIN_SPLITTER_SIZES)
+        main_splitter.setSizes([700, 200])
+        
         main_layout.addWidget(main_splitter)
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
 
-    def init_log_offsets(self) -> None:
-        """初始化日志文件偏移量，只记录启动时已有内容"""
+    def init_log_offsets(self):
+        """初始化日志文件偏移量"""
         log_dir = os.path.abspath("log")
         if not os.path.exists(log_dir):
             print("[提示] 日志目录不存在")
             self.append_log("[提示] 日志目录不存在")
             return
+            
         for root, _, files in os.walk(log_dir):
             for fname in files:
                 fpath = os.path.join(root, fname)
@@ -289,14 +241,15 @@ class ScriptExecutorUI(QMainWindow):
                 except Exception:
                     self.log_file_offsets[fpath] = 0
 
-    def load_scripts(self) -> None:
+    def load_scripts(self):
+        """加载脚本树"""
         self.script_tree.clear()
         if not os.path.exists(SCRIPTS_DIR):
             QMessageBox.critical(self, "错误", f"脚本目录不存在: {SCRIPTS_DIR}")
             return
+            
         def add_items(parent_item, dir_path):
             for entry in sorted(os.listdir(dir_path)):
-                # 跳过不需要显示的目录
                 if should_skip_directory(entry):
                     continue
                     
@@ -308,8 +261,8 @@ class ScriptExecutorUI(QMainWindow):
                         item = QTreeWidgetItem([entry])
                         parent_item.addChild(item)
                         add_items(item, full_path)
+                        
         for entry in sorted(os.listdir(SCRIPTS_DIR)):
-            # 跳过不需要显示的目录
             if should_skip_directory(entry):
                 continue
                 
@@ -321,34 +274,33 @@ class ScriptExecutorUI(QMainWindow):
                     item = QTreeWidgetItem([entry])
                     self.script_tree.addTopLevelItem(item)
                     add_items(item, full_path)
+                    
         self.script_tree.expandAll()
 
     def on_script_selected(self):
+        """脚本选择事件"""
         selected_items = self.script_tree.selectedItems()
         if not selected_items:
-            self.config_label.setText("配置文件: 无")
-            self.doc_label.hide()
             self.clear_form()
             self.run_btn.hide()
             return
+            
         item = selected_items[0]
         path_parts = get_tree_item_path(item)
         if not path_parts:
-            self.config_label.hide()
-            self.doc_label.hide()
             self.clear_form()
             self.run_btn.hide()
             return
+            
         script_name = path_parts[-1]
         script_dir = os.path.abspath(os.path.join(SCRIPTS_DIR, *path_parts))
+        
         if not has_script_file(script_dir):
-            self.config_label.hide()
-            self.doc_label.hide()
             self.clear_form()
             self.run_btn.hide()
             return
-        config_path = os.path.abspath(os.path.join(CONFIGS_DIR, f"{script_name}.json"))
-        yaml_path = os.path.abspath(os.path.join(script_dir, "form.yaml"))
+            
+        # 显示文档
         doc_path = os.path.abspath(os.path.join(script_dir, "README.md"))
         if os.path.exists(doc_path):
             with open(doc_path, "r", encoding="utf-8") as f:
@@ -360,19 +312,27 @@ class ScriptExecutorUI(QMainWindow):
                 self.doc_label.hide()
         else:
             self.doc_label.hide()
+            
+        # 显示配置文件路径
+        config_path = os.path.abspath(os.path.join(CONFIGS_DIR, f"{script_name}.json"))
         if os.path.exists(config_path):
             self.config_label.setText(f"配置文件: {config_path}")
             self.config_label.show()
         else:
             self.config_label.hide()
+            
+        # 构建表单
         self.clear_form()
+        yaml_path = os.path.abspath(os.path.join(script_dir, "form.yaml"))
         if os.path.exists(yaml_path):
             self.form_fields = self.form_builder.build_form(self.form_layout, yaml_path)
         else:
             self.form_fields = {}
+            
         self.run_btn.show()
 
-    def clear_form(self) -> None:
+    def clear_form(self):
+        """清空表单"""
         while self.form_layout.count():
             item = self.form_layout.takeAt(0)
             widget = item.widget()
@@ -381,6 +341,7 @@ class ScriptExecutorUI(QMainWindow):
         self.form_fields = {}
 
     def get_widget_value(self, widget):
+        """获取控件值"""
         widget_value_getters = {
             QCheckBox: lambda w: w.isChecked(),
             QListWidget: lambda w: [item.text() for item in w.selectedItems()],
@@ -389,9 +350,11 @@ class ScriptExecutorUI(QMainWindow):
             QComboBox: lambda w: w.currentText(),
             QDateEdit: lambda w: w.date().toString("yyyy-MM-dd"),
         }
+        
         for widget_type, getter in widget_value_getters.items():
             if isinstance(widget, widget_type):
                 return getter(widget)
+                
         if hasattr(widget, 'currentText') and callable(widget.currentText):
             return widget.currentText()
         if hasattr(widget, 'text') and callable(widget.text):
@@ -402,20 +365,22 @@ class ScriptExecutorUI(QMainWindow):
             return widget.date().toString("yyyy-MM-dd")
         return None
 
-    def run_script(self) -> None:
+    def run_script(self):
+        """运行脚本"""
         item = self.script_tree.currentItem()
         if not item:
             QMessageBox.warning(self, "提示", "请先选择一个脚本")
             return
+            
         path_parts = get_tree_item_path(item)
         if not path_parts:
             QMessageBox.warning(self, "提示", "请先选择一个脚本")
             return
+            
         script_rel_path = os.path.join(*path_parts)
         config_path = os.path.abspath(os.path.join(CONFIGS_DIR, f"{path_parts[-1]}.json"))
-        if not is_safe_script_path(SCRIPTS_DIR, script_rel_path):
-            QMessageBox.critical(self, "错误", "非法脚本路径")
-            return
+        
+        # 获取配置
         config = {}
         if hasattr(self, "form_fields") and self.form_fields:
             for k, w in self.form_fields.items():
@@ -426,18 +391,21 @@ class ScriptExecutorUI(QMainWindow):
         elif os.path.exists(config_path):
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
+                
         success = self.script_executor.run_script(script_rel_path, config, CEDAR_BASE_DIR)
         if not success:
             QMessageBox.critical(self, "错误", "启动脚本失败")
 
-    def on_script_started(self, script_name: str) -> None:
+    def on_script_started(self, script_name: str):
+        """脚本开始执行"""
         print(f"脚本开始执行: {script_name}")
         self.append_log(f"脚本开始执行: {script_name}")
         self.run_btn.setEnabled(False)
         self.form_widget.setEnabled(False)
-        self.run_btn.setText(RUNNING_BUTTON_TEXT)
+        self.run_btn.setText("运行中...")
 
-    def on_script_finished(self, exit_code: int) -> None:
+    def on_script_finished(self, exit_code: int):
+        """脚本执行完成"""
         if exit_code == 0:
             print("脚本执行完成")
             self.append_log("脚本执行完成")
@@ -446,29 +414,33 @@ class ScriptExecutorUI(QMainWindow):
             self.append_log(f"脚本执行失败，退出码: {exit_code}")
         self.run_btn.setEnabled(True)
         self.form_widget.setEnabled(True)
-        self.run_btn.setText(RUN_BUTTON_TEXT)
+        self.run_btn.setText("运行脚本")
 
-    def on_script_error(self, error_msg: str) -> None:
+    def on_script_error(self, error_msg: str):
+        """脚本执行错误"""
         print(f"脚本执行错误: {error_msg}")
         self.append_log(f"脚本执行错误: {error_msg}")
         QMessageBox.critical(self, "错误", f"脚本执行错误: {error_msg}")
         self.run_btn.setEnabled(True)
         self.form_widget.setEnabled(True)
-        self.run_btn.setText(RUN_BUTTON_TEXT)
+        self.run_btn.setText("运行脚本")
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event):
+        """窗口关闭事件"""
         if hasattr(self, 'script_executor'):
             self.script_executor.cleanup()
         if hasattr(self, 'log_monitor_timer'):
             self.log_monitor_timer.stop()
         event.accept()
 
-    def monitor_log_dir(self) -> None:
+    def monitor_log_dir(self):
+        """监控日志目录"""
         log_dir = os.path.abspath("log")
         if not os.path.exists(log_dir):
             print("[提示] 日志目录不存在")
             self.append_log("[提示] 日志目录不存在")
             return
+            
         for root, _, files in os.walk(log_dir):
             for fname in files:
                 fpath = os.path.join(root, fname)
