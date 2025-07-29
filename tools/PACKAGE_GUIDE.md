@@ -37,9 +37,6 @@ CedarEx 轻量化打包工具是一个专为 Windows 环境设计的 Python 应�
 
 ### 1. 基本打包
 ```bash
-# 进入项目目录
-cd /d/SMore_dev/cedar_ex
-
 # 运行打包工具
 python tools/pa_win.py
 ```
@@ -111,53 +108,6 @@ dist/main.dist/
 ## 🔧 故障排除
 
 ### 常见问题
-
-#### 1. 编译失败
-**症状**: Nuitka 编译过程中出现错误
-**解决方案**:
-```bash
-# 检查 Python 环境
-python --version
-pip list | grep nuitka
-
-# 重新安装 Nuitka
-pip install --upgrade nuitka
-
-# 清理缓存后重试
-python tools/pa_win.py
-```
-
-#### 2. 虚拟环境复制失败
-**症状**: 复制 `env/` 目录时出现权限错误
-**解决方案**:
-```bash
-# 以管理员身份运行
-# 或使用 --no-venv 参数
-python tools/pa_win.py --no-venv
-```
-
-#### 3. 启动脚本无法运行
-**症状**: `run.bat` 执行时出现路径错误
-**解决方案**:
-```bash
-# 检查文件结构
-dir dist/main.dist
-
-# 手动设置环境变量
-set PYTHONPATH=%CD%/app_ui;%CD%/scripts
-my_venv/python.exe -c "import main"
-```
-
-#### 4. 依赖库缺失
-**症状**: 运行时提示模块找不到
-**解决方案**:
-```bash
-# 检查虚拟环境
-dir dist/main.dist/my_venv/Lib/site-packages
-
-# 重新打包完整版本
-python tools/pa_win.py
-```
 
 
 
