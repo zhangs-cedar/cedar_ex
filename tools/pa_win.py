@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-简化版 Nuitka 打包脚本 (Windows版本)
-"""
-
 import os
 import sys
 import shutil
@@ -80,8 +74,8 @@ def main():
         project_root = script_dir
     
     dist_dir = project_root / "dist" / "main.dist"
-    conda_env = r"D:\SMore_dev\cedar_ex\env"
-    python_exe = str(Path(conda_env) / "python.exe")
+    conda_env = project_root / "env"  # 基于项目根目录拼接env目录
+    python_exe = str(conda_env / "python.exe")
     
     print("=" * 60)
     print("Cedar Ex 轻量化打包工具 (Windows版本)")
@@ -204,7 +198,7 @@ def main():
         # 复制图标文件
         icon_src = project_root / "app_ui" / "icon.ico"
         if icon_src.exists():
-            icon_dst = dist_dir / "icon.ico"
+            icon_dst = dist_dir/ "app_ui" / "icon.ico"
             shutil.copy2(icon_src, icon_dst)
             print(f"  ✓ 复制图标文件: icon.ico")
         else:
