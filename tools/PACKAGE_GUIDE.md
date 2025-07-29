@@ -1,92 +1,163 @@
-# Cedar Ex 轻量化打包指南
+# CedarEx 轻量化打包指南
 
-## 打包策略
+## 🎯 概述
 
-修改后的打包脚本采用**轻量化打包**策略：
+CedarEx 轻量化打包工具是一个专为 Windows 环境设计的 Python 应用程序打包解决方案。该工具采用创新的轻量化策略，将 Python 代码编译为二进制文件，同时保持依赖库的动态加载能力。
+
+### 主要特性
+- ✅ **轻量化打包**：只编译代码，不打包依赖
+- ✅ **动态依赖加载**：从虚拟环境动态加载所有依赖库
+- ✅ **最小化体积**：主程序只包含编译后的代码逻辑
+- ✅ **跨平台兼容**：专为 Windows 环境优化
+- ✅ **一键部署**：自动生成启动脚本和压缩包
+
+## 🚀 打包策略
 
 ### 核心思想
-- **只编译代码，不打包依赖**：所有 Python 代码编译为二进制文件
-- **依赖外部环境**：所有依赖库从 `my_venv/` 目录动态加载
-- **最小化打包体积**：主程序只包含编译后的代码逻辑
+- **代码编译**：所有 Python 代码使用 Nuitka 编译为二进制文件
+- **依赖分离**：所有依赖库从 `my_venv/` 目录动态加载
+- **体积优化**：主程序只包含编译后的代码逻辑，大幅减少打包体积
 
-## 打包结果
+### 技术架构
+```
+源代码 → Nuitka编译 → 二进制模块 → 轻量化打包
+    ↓
+虚拟环境 → 依赖库 → 动态加载 → 运行时环境
+```
 
+## 💻 系统要求
+
+### 必需环境
+- **操作系统**: Windows 10/11
+- **Python**: 3.8+ (推荐使用 Conda 环境)
+- **编译器**: Nuitka
+- **GUI框架**: PyQt5
+
+## 📦 使用方法
+
+### 1. 基本打包
+```bash
+# 进入项目目录
+cd /d/SMore_dev/cedar_ex
+
+# 运行打包工具
+python tools/pa_win.py
+```
+
+### 2. 高级打包选项
+```bash
+# 只打包源码，不复制虚拟环境
+python tools/pa_win.py --no-venv
+
+# 不创建压缩包
+python tools/pa_win.py --no-compress
+
+# 组合使用
+python tools/pa_win.py --no-venv --no-compress
+```
+
+### 3. 运行打包后的程序
+```bash
+# 方式1: 使用批处理文件 (有控制台窗口)
+cd dist/main.dist
+run.bat
+
+# 方式2: 使用VBS脚本 (无控制台窗口)
+cd dist/main.dist
+run.vbs
+
+```
+
+## 📁 打包结果
+
+### 目录结构
 ```
 dist/main.dist/
-├─ main.py               （编译后的主程序模块）
-├─ app_ui/               （编译后的 app_ui 模块）
-├─ scripts/              （编译后的脚本模块）
-├─ my_venv/              （完整的虚拟环境）
-├─ configs/              （配置文件目录）
-├─ log/                  （日志目录）
-└─ run.sh                （启动脚本）
+├── main.py               # 编译后的主程序模块
+├── app_ui/               # 编译后的GUI模块
+│   ├── FormBuilder.py
+│   ├── ScriptExecutor.py
+│   └── icon.ico
+├── scripts/              # 编译后的脚本模块
+├── my_venv/              # 完整的虚拟环境
+│   ├── python.exe
+│   ├── Lib/
+│   └── Scripts/
+├── configs/              # 配置文件目录
+├── log/                  # 日志目录
+├── run.bat               # Windows启动脚本
+└── run.vbs               # 无窗口启动脚本
 ```
 
-## 关键修改
+### 文件说明
+- **编译文件**: 所有 `.py` 文件被编译为 `.pyd` 或 `.exe` 文件
+- **虚拟环境**: 包含完整的 Python 解释器和所有依赖库
+- **启动脚本**: 自动配置环境变量和 Python 路径
+- **配置文件**: 保持原有的配置和日志结构
 
-### 1. 使用 `--module` 模式
+## ⚙️ 命令行参数
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--no-venv` | 不复制虚拟环境，只打包源码 | False |
+| `--no-compress` | 不创建压缩包 | False |
+| `-h, --help` | 显示帮助信息 | - |
+
+### 参数使用场景
+- **`--no-venv`**: 当目标环境已有相同版本的 Python 环境时使用
+- **`--no-compress`**: 快速测试打包结果时使用
+- **无参数**: 完整打包，包含虚拟环境和压缩包
+
+## 🔧 故障排除
+
+### 常见问题
+
+#### 1. 编译失败
+**症状**: Nuitka 编译过程中出现错误
+**解决方案**:
 ```bash
-# 之前：--standalone（包含所有依赖）
-# 现在：--module（只编译代码）
-python -m nuitka --module main.py
+# 检查 Python 环境
+python --version
+pip list | grep nuitka
+
+# 重新安装 Nuitka
+pip install --upgrade nuitka
+
+# 清理缓存后重试
+python tools/pa_win.py
 ```
 
-### 2. 移除 `--include-package` 参数
+#### 2. 虚拟环境复制失败
+**症状**: 复制 `env/` 目录时出现权限错误
+**解决方案**:
 ```bash
-# 之前：--include-package=PyQt5,yaml,cedar
-# 现在：不包含任何包，依赖外部环境
+# 以管理员身份运行
+# 或使用 --no-venv 参数
+python tools/pa_win.py --no-venv
 ```
 
-### 3. 修改启动脚本
+#### 3. 启动脚本无法运行
+**症状**: `run.bat` 执行时出现路径错误
+**解决方案**:
 ```bash
-#!/bin/bash
-# 设置 Python 环境
-export PYTHONPATH="$PWD/app_ui:$PWD/scripts:$PYTHONPATH"
-# 使用虚拟环境中的 Python 运行主程序
-$PWD/my_venv/bin/python main.py
+# 检查文件结构
+dir dist/main.dist
+
+# 手动设置环境变量
+set PYTHONPATH=%CD%/app_ui;%CD%/scripts
+my_venv/python.exe -c "import main"
 ```
 
-## 优势
-
-1. **体积小**：主程序文件很小，只包含业务逻辑
-2. **依赖清晰**：所有依赖都在 `my_venv/` 中，便于管理
-3. **更新方便**：可以单独更新依赖环境而不影响代码
-4. **调试友好**：可以方便地修改虚拟环境中的依赖
-
-## 使用方法
-
-### 1. 运行打包
+#### 4. 依赖库缺失
+**症状**: 运行时提示模块找不到
+**解决方案**:
 ```bash
-python pa_simple.py
+# 检查虚拟环境
+dir dist/main.dist/my_venv/Lib/site-packages
+
+# 重新打包完整版本
+python tools/pa_win.py
 ```
 
-### 2. 运行程序
-```bash
-cd dist/main.dist
-./run.sh
-```
 
-## 注意事项
 
-1. **环境依赖**：程序必须依赖 `my_venv/` 目录中的 Python 环境
-2. **路径固定**：启动脚本中的路径是固定的，不能随意移动
-3. **权限要求**：需要确保 `my_venv/bin/python` 有执行权限
-
-## 技术原理
-
-### 模块模式 vs 独立模式
-
-| 特性 | `--module` 模式 | `--standalone` 模式 |
-|------|----------------|-------------------|
-| 包含依赖 | ❌ 不包含 | ✅ 包含所有依赖 |
-| 文件大小 | 小 | 大 |
-| 运行方式 | 需要外部 Python | 完全独立 |
-| 依赖管理 | 外部管理 | 内置管理 |
-
-### 动态加载机制
-
-1. **启动时**：`run.sh` 设置 `PYTHONPATH` 指向编译后的模块
-2. **运行时**：使用 `my_venv/bin/python` 加载编译后的模块
-3. **依赖解析**：Python 解释器从 `my_venv/` 中查找所有依赖包
-
-这种打包方式既保证了代码的安全性（编译加密），又保持了部署的灵活性（依赖外部管理）。 
