@@ -31,7 +31,7 @@ CedarEx 轻量化打包工具是一个专为 Windows 环境设计的 Python 应�
 - **操作系统**: Windows 10/11
 - **Python**: 3.8+ (推荐使用 Conda 环境)
 - **编译器**: Nuitka
-- **GUI框架**: PyQt5
+- **GUI框架**: PyQt6
 
 ## 📦 使用方法
 

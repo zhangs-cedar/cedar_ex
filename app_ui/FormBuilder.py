@@ -1,6 +1,6 @@
 import yaml
 from typing import Dict, Any
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QLineEdit,
     QTextEdit,
     QSpinBox,
@@ -14,8 +14,8 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QFormLayout,
 )
-from PyQt5.QtCore import QDate
-from PyQt5.QtWidgets import QListWidget, QListWidgetItem
+from PyQt6.QtCore import QDate
+from PyQt6.QtWidgets import QListWidget, QListWidgetItem
 
 
 class FormBuilder:
@@ -59,7 +59,7 @@ class FormBuilder:
                 widget.setChecked(bool(default))
             elif ftype == 'select' and field.get('multiple', False):
                 widget = QListWidget()
-                widget.setSelectionMode(QListWidget.MultiSelection)
+                widget.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
                 options = field.get('options', [])
                 for opt in options:
                     item = QListWidgetItem(str(opt))

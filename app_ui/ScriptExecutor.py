@@ -6,7 +6,7 @@ import threading
 import time
 import queue
 from typing import Dict, Any, Optional
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 from datetime import datetime
 from cedar.utils import print
 

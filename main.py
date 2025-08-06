@@ -1,7 +1,7 @@
 import sys
 import os
 import json
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
@@ -25,8 +25,8 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QDateEdit,
 )
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QFont, QIcon
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QFont, QIcon
 
 from app_ui.ScriptExecutor import ScriptExecutor
 from app_ui.FormBuilder import FormBuilder
@@ -144,7 +144,7 @@ class ScriptExecutorUI(QMainWindow):
         QTimer.singleShot(0, self._scroll_log_to_end)
 
     def _scroll_log_to_end(self):
-        self.log_text.moveCursor(self.log_text.textCursor().End)
+        self.log_text.moveCursor(self.log_text.textCursor().MoveOperation.End)
         self.log_text.ensureCursorVisible()
 
     def init_ui(self):
@@ -153,8 +153,8 @@ class ScriptExecutorUI(QMainWindow):
         main_layout.setContentsMargins(16, 16, 16, 16)
         main_layout.setSpacing(8)
 
-        main_splitter = QSplitter(Qt.Vertical)
-        h_splitter = QSplitter(Qt.Horizontal)
+        main_splitter = QSplitter(Qt.Orientation.Vertical)
+        h_splitter = QSplitter(Qt.Orientation.Horizontal)
 
         # 左侧：脚本树
         left_panel = QVBoxLayout()
@@ -190,8 +190,8 @@ class ScriptExecutorUI(QMainWindow):
         param_layout.addWidget(self.config_label)
 
         self.form_layout = QFormLayout()
-        self.form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.form_layout.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.form_layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.form_layout.setHorizontalSpacing(18)
         self.form_layout.setVerticalSpacing(8)
 
@@ -224,8 +224,8 @@ class ScriptExecutorUI(QMainWindow):
         # 日志区
         log_panel = QVBoxLayout()
         log_frame = QFrame()
-        log_frame.setFrameShape(QFrame.HLine)
-        log_frame.setFrameShadow(QFrame.Sunken)
+        log_frame.setFrameShape(QFrame.Shape.HLine)
+        log_frame.setFrameShadow(QFrame.Shadow.Sunken)
         log_panel.addWidget(log_frame)
 
         log_group = QGroupBox('日志输出')
@@ -486,4 +486,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = ScriptExecutorUI()
     win.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

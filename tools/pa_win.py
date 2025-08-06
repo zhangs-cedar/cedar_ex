@@ -203,7 +203,7 @@ def main():
 REM 设置 Python 环境
 set PYTHONPATH=%CD%/app_ui;%CD%/scripts;%PYTHONPATH%
 REM 使用虚拟环境中的 Python 运行主程序
-"%CD%/my_venv/python.exe" -c "import sys; import os; sys.path.insert(0, r'%CD%'); import main; from PyQt5.QtWidgets import QApplication; app = QApplication(sys.argv); from main import ScriptExecutorUI; win = ScriptExecutorUI(); win.show(); sys.exit(app.exec_())"
+"%CD%/my_venv/python.exe" -c "import sys; import os; sys.path.insert(0, r'%CD%'); import main; from PyQt6.QtWidgets import QApplication; app = QApplication(sys.argv); from main import ScriptExecutorUI; win = ScriptExecutorUI(); win.show(); sys.exit(app.exec())"
 pause
 """
 
