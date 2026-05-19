@@ -206,9 +206,11 @@ function renderNodes(nodes, parent, keyword) {
     if (!visible) return;
 
     const btn = document.createElement('button');
-    btn.className = `script-item ${node.runnable ? '' : 'disabled'} ${state.selectedPath === node.path ? 'active' : ''}`;
+    btn.className = `script-item ${node.runnable ? 'tool-item' : 'folder-item disabled'} ${state.selectedPath === node.path ? 'active' : ''}`;
     btn.title = node.path || node.name;
-    btn.innerHTML = `<span class="script-icon">${node.runnable ? '▶' : '▾'}</span><span class="script-name">${escapeHtml(node.name)}</span>`;
+    btn.innerHTML = node.runnable
+      ? `<span class="script-name">${escapeHtml(node.name)}</span><small>${escapeHtml(node.path || '可运行工具')}</small>`
+      : `<span class="script-name">▾ ${escapeHtml(node.name)}</span>`;
     if (node.runnable) btn.addEventListener('click', () => selectScript(node));
     parent.appendChild(btn);
     if (childVisible > 0) parent.appendChild(childrenBox);
