@@ -3,45 +3,36 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CedarEx</title>
+    <title>CedarEx 工具台</title>
     <link rel="stylesheet" href="vendor/xterm.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="vscode-shell">
       <header class="titlebar">
-        <div class="command-center">CedarEx: 搜索脚本、运行命令、调用 AI</div>
-        <div class="title-meta">Python · local workspace</div>
+        <div class="window-dots"><span></span><span></span><span></span></div>
       </header>
 
       <div class="main-layout">
-        <nav class="activity-bar" aria-label="主功能">
-          <button class="activity-item active" data-view="explorer" title="脚本资源管理器">📁</button>
-          <button class="activity-item" data-view="run" title="运行脚本">▶</button>
-          <button class="activity-item" data-view="search" title="搜索">⌕</button>
-          <button class="activity-item" data-view="history" title="运行历史">⑂</button>
-          <button class="activity-item ai" data-view="ai" title="AI">AI</button>
-        </nav>
-
         <aside class="sidebar">
-          <div id="sideTitle" class="side-title">脚本资源管理器</div>
-          <label class="search-box" aria-label="搜索脚本">
+          <div id="sideTitle" class="side-title">工具列表</div>
+          <label class="search-box" aria-label="搜索工具">
             <span>⌕</span>
-            <input id="scriptSearch" placeholder="搜索 scripts..." autocomplete="off" />
+            <input id="scriptSearch" placeholder="搜索工具..." autocomplete="off" />
           </label>
           <div class="sidebar-meta">
-            <span id="scriptCount">0 个脚本</span>
+            <span id="scriptCount">0 个工具</span>
             <button id="refreshBtn" class="text-button">刷新</button>
           </div>
-          <nav id="scriptTree" class="script-tree" aria-label="脚本列表"></nav>
+          <nav id="scriptTree" class="script-tree" aria-label="工具列表"></nav>
           <div id="sidePanel" class="side-panel hidden"></div>
         </aside>
 
         <main class="workspace">
           <div class="tabs">
-            <button class="tab active" data-editor-tab="form"><span id="scriptTitle">选择一个脚本开始</span></button>
-            <button class="tab" data-editor-tab="readme">README Preview</button>
-            <button class="tab" data-editor-tab="history">Run History</button>
+            <button class="tab active" data-editor-tab="form"><span id="scriptTitle">选择一个工具开始</span></button>
+            <button class="tab" data-editor-tab="readme">使用说明</button>
+            <button class="tab" data-editor-tab="history">运行记录</button>
           </div>
 
           <section class="editor-area">
@@ -49,28 +40,33 @@
               <header class="topbar">
                 <div>
                   <div class="eyebrow">当前任务</div>
-                  <p id="scriptPath" class="muted">左侧选择脚本后，会自动生成参数表单。</p>
+                  <p id="scriptPath" class="muted">左侧选择工具后，会自动生成需要填写的信息。</p>
                 </div>
                 <div class="run-state" id="runState">空闲</div>
               </header>
 
               <section id="emptyState" class="empty-state">
                 <div class="empty-icon">▶</div>
-                <h3>选择脚本，填写参数，然后运行</h3>
-                <p>底部是真实终端，可直接输入命令，也会承接脚本执行输出。</p>
+                <h3>选择工具，填写信息，然后开始</h3>
+                <p>不需要输入命令。执行过程会显示在底部，完成后可以复制记录。</p>
+              </section>
+
+              <section id="resultPanel" class="result-panel hidden">
+                <h3 id="resultTitle">处理完成</h3>
+                <p id="resultSummary">执行已完成，请查看输出记录或打开生成的报告。</p>
               </section>
 
               <section id="taskPanel" class="task-panel hidden">
                 <article class="card form-card">
                   <div class="card-header">
                     <div>
-                      <h3>参数配置</h3>
-                      <p class="muted">由 form.yaml 生成，可保存为运行预设。</p>
+                      <h3>填写信息</h3>
+                      <p class="muted">按提示填写即可，不需要了解代码或命令。</p>
                     </div>
                     <div class="actions">
                       <button id="resetBtn" class="ghost">重置</button>
-                      <button id="runBtn" class="primary">▶ 运行脚本</button>
-                      <button id="stopBtn" class="danger">停止 / Ctrl+C</button>
+                      <button id="runBtn" class="primary">开始运行</button>
+                      <button id="stopBtn" class="danger">停止</button>
                     </div>
                   </div>
                   <form id="configForm" class="form"></form>
@@ -81,8 +77,8 @@
                 <article class="card doc-card">
                   <div class="card-header compact">
                     <div>
-                      <h3>README Preview</h3>
-                      <p class="muted">当前脚本说明文档，支持 Markdown 和 Mermaid。</p>
+                      <h3>使用说明</h3>
+                      <p class="muted">当前工具的用途、操作步骤和安全说明。</p>
                     </div>
                     <button id="toggleDocBtn" class="text-button">收起</button>
                   </div>
@@ -92,54 +88,48 @@
             </section>
 
             <aside class="assistant-pane">
-              <div class="assistant-title">AI Copilot Panel</div>
+              <div class="assistant-title">智能助手</div>
               <article class="card ai-card">
-                <h3>上下文</h3>
-                <p class="muted">脚本说明已移至 README Preview。这里保留 AI 操作与运行诊断结果。</p>
+                <h3>现在可以做什么</h3>
+                <p class="muted">先选择一个工具，再填写必要信息。不确定用途时打开“使用说明”。</p>
               </article>
               <article id="aiReviewPanel" class="card ai-review-card hidden">
-                <div class="card-header compact">
-                  <div>
-                    <h3>AI Review</h3>
-                    <p class="muted">基于参数、退出码和终端日志给出诊断。</p>
-                  </div>
-                </div>
-                <div id="aiReview" class="doc markdown-body">暂无分析结果。</div>
+                <div class="card-header compact"><div><h3>智能建议</h3><p class="muted">基于填写信息和执行记录给出建议。</p></div></div>
+                <div id="aiReview" class="doc markdown-body">暂无建议。</div>
               </article>
               <article class="card ai-card">
-                <h3>快捷动作</h3>
+                <h3>一键帮我</h3>
                 <div class="quick-actions">
-                  <button type="button" data-ai-action="explain_params">解释参数</button>
-                  <button type="button" data-ai-action="generate_command">生成命令</button>
-                  <button type="button" data-ai-action="diagnose_log">诊断日志</button>
-                  <button type="button" data-ai-action="create_template">创建模板</button>
+                  <button type="button" data-ai-action="explain_params">解释当前设置</button>
+                  <button type="button" data-ai-action="generate_command">推荐处理方式</button>
+                  <button type="button" data-ai-action="diagnose_log">查看问题原因</button>
+                  <button type="button" data-ai-action="create_template">生成新工具模板</button>
                 </div>
+              </article>
+              <article class="card ai-card">
+                <h3>运行前确认</h3>
+                <p id="precheckText" class="muted">请选择工具并填写必填信息。</p>
               </article>
             </aside>
           </section>
 
           <section class="terminal-panel">
             <div class="panel-tabs">
-              <b>TERMINAL</b><span>PROBLEMS</span><span>OUTPUT</span><span>AI REVIEW</span>
-              <span id="logHint" class="terminal-hint">等待命令执行。</span>
+              <b>执行过程</b>
+              <span id="logHint" class="terminal-hint">等待开始。</span>
               <div class="actions terminal-actions">
-                <button id="analyzeBtn" class="ghost" disabled>让 opencode 分析</button>
-                <button id="copyLogBtn" class="ghost">复制日志</button>
+                <button id="copyLogBtn" class="ghost">复制记录</button>
                 <button id="clearLogBtn" class="ghost">清空</button>
               </div>
             </div>
             <div class="terminal-window">
-              <div class="terminal-titlebar">
-                <div id="terminalTitle" class="terminal-title">cedarex — idle</div>
-                <div class="terminal-badge">real pty</div>
-              </div>
               <div id="terminal" class="xterm-host"></div>
             </div>
           </section>
         </main>
       </div>
 
-      <footer class="statusbar"><span>CedarEx Workspace</span><span>AI: opencode ready · UTF-8</span></footer>
+      <footer class="statusbar"><span>CedarEx 工具台</span><span>智能助手已就绪 · UTF-8</span></footer>
     </div>
     <div id="toast" class="toast hidden"></div>
     <script src="vendor/mermaid.min.js"></script>
