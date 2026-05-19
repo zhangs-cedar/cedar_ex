@@ -70,18 +70,29 @@
           </article>
         </section>
 
-        <section class="card log-card">
+        <section class="card log-card terminal-card">
           <div class="card-header compact">
             <div>
-              <h3>执行日志</h3>
-              <p id="logHint" class="muted">运行脚本后日志会显示在这里。</p>
+              <h3>Terminal</h3>
+              <p id="logHint" class="muted">等待命令执行。</p>
             </div>
             <div class="actions">
               <button id="copyLogBtn" class="ghost">复制日志</button>
               <button id="clearLogBtn" class="ghost">清空</button>
             </div>
           </div>
-          <pre id="log" class="log"></pre>
+          <div class="terminal-window">
+            <div class="terminal-titlebar">
+              <div class="traffic-lights" aria-hidden="true">
+                <span class="red"></span>
+                <span class="yellow"></span>
+                <span class="green"></span>
+              </div>
+              <div id="terminalTitle" class="terminal-title">cedarex — idle</div>
+              <div class="terminal-badge">local</div>
+            </div>
+            <pre id="log" class="log terminal-output"></pre>
+          </div>
         </section>
       </main>
     </div>

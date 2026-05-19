@@ -32,6 +32,7 @@ const els = {
   clearLog: $('clearLogBtn'),
   copyLog: $('copyLogBtn'),
   toggleDoc: $('toggleDocBtn'),
+  terminalTitle: $('terminalTitle'),
   toast: $('toast'),
 };
 
@@ -61,6 +62,7 @@ async function init() {
   els.count.textContent = `${state.flatScripts.length} 个可运行脚本`;
   renderTree();
   setRunState('idle', '空闲');
+  setTerminalTitle('idle');
 }
 
 function flattenScripts(nodes, list = []) {
@@ -117,6 +119,7 @@ async function selectScript(node) {
   renderTree();
   setLog('');
   setRunState('idle', '空闲');
+  setTerminalTitle(`selected — ${node.name}`);
   els.title.textContent = node.name;
   els.path.textContent = node.path;
   els.empty.classList.add('hidden');
@@ -285,11 +288,13 @@ async function runSelectedScript(event) {
   if (!state.selectedPath || state.running || !validateForm()) return;
   setRunning(true);
   setRunState('running', '运行中');
-  setLog('正在启动脚本...\n');
+  setTerminalTitle(`running — ${state.selectedPath}`);
+  setLog(`$ python ${state.selectedPath}/main.py\n正在启动脚本...\n`);
   const res = await window.pywebview.api.run_script(state.selectedPath, collectConfig());
   if (!res.ok) {
     setRunning(false);
     setRunState('error', '启动失败');
+    setTerminalTitle('start failed');
     showToast(res.error || '启动失败');
     return;
   }
@@ -308,6 +313,7 @@ async function pollStatus() {
     setRunning(false);
     const ok = res.data.exit_code === 0;
     setRunState(ok ? 'success' : 'error', ok ? '执行成功' : `失败：${res.data.exit_code}`);
+    setTerminalTitle(ok ? `completed — exit 0` : `failed — exit ${res.data.exit_code}`);
     showToast(ok ? '脚本执行完成' : '脚本执行失败，请查看日志');
   }
 }
@@ -339,7 +345,11 @@ function setRunState(kind, text) {
 function setLog(text) {
   els.log.textContent = text;
   els.log.scrollTop = els.log.scrollHeight;
-  els.logHint.textContent = text ? '日志实时更新中。' : '运行脚本后日志会显示在这里。';
+  els.logHint.textContent = text ? '日志实时更新中，输出会自动滚动到底部。' : '等待命令执行。';
+}
+
+function setTerminalTitle(text) {
+  if (els.terminalTitle) els.terminalTitle.textContent = `cedarex — ${text}`;
 }
 
 async function copyLog() {

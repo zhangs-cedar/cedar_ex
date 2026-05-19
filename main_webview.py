@@ -46,14 +46,17 @@ def has_valid_subdirs(dir_path):
 
 
 class ScriptRun:
-    def __init__(self, run_id, process, log_path, config_path):
+    def __init__(self, run_id, process, log_path, config_path, script_name):
         self.run_id = run_id
         self.process = process
         self.log_path = log_path
         self.config_path = config_path
+        self.script_name = script_name
         self.created_at = datetime.now().isoformat(timespec='seconds')
         self.finished = False
         self.exit_code = None
+        self.file_offsets = {}
+        self.external_log = []
 
 
 class Api:
@@ -151,7 +154,8 @@ class Api:
             text=True,
             bufsize=1,
         )
-        run = ScriptRun(run_id, process, log_path, config_file.name)
+        run = ScriptRun(run_id, process, log_path, config_file.name, Path(script_rel_path).name)
+        self._init_log_offsets(run)
         self.runs[run_id] = run
         self.current_run = run
         threading.Thread(target=self._pipe_output, args=(run,), daemon=True).start()
@@ -165,7 +169,10 @@ class Api:
         if exit_code is not None:
             run.finished = True
             run.exit_code = exit_code
-        log = run.log_path.read_text(encoding='utf-8') if run.log_path.exists() else ''
+        self._collect_external_logs(run)
+        own_log = run.log_path.read_text(encoding='utf-8') if run.log_path.exists() else ''
+        external_log = ''.join(run.external_log)
+        log = own_log + ('\n' if own_log and external_log else '') + external_log
         return {'ok': True, 'data': {'finished': run.finished, 'exit_code': run.exit_code, 'log': log}}
 
     def stop_current(self):
@@ -205,6 +212,45 @@ class Api:
                 os.unlink(run.config_path)
             except OSError:
                 pass
+
+    def _init_log_offsets(self, run):
+        """记录已有日志文件大小，后续只读取脚本运行期间新增内容。"""
+        if not LOG_DIR.exists():
+            return
+        for path in LOG_DIR.rglob('*.log'):
+            try:
+                run.file_offsets[str(path)] = path.stat().st_size
+            except OSError:
+                run.file_offsets[str(path)] = 0
+
+    def _collect_external_logs(self, run):
+        """读取脚本自行写入 log/ 目录的新增内容。
+
+        现有脚本通常通过 cedar.utils.print 写入 LOG_PATH 指向的文件，
+        不一定输出到 stdout；因此仅监听 subprocess stdout 会导致运行中无日志。
+        """
+        if not LOG_DIR.exists():
+            return
+        for path in sorted(LOG_DIR.rglob('*.log'), key=lambda p: str(p)):
+            if path.resolve() == run.log_path.resolve():
+                continue
+            key = str(path)
+            try:
+                last_offset = run.file_offsets.get(key, 0)
+                size = path.stat().st_size
+                if size < last_offset:
+                    last_offset = 0
+                if size == last_offset:
+                    continue
+                with path.open('r', encoding='utf-8') as f:
+                    f.seek(last_offset)
+                    content = f.read()
+                run.file_offsets[key] = size
+                if content:
+                    rel_path = path.relative_to(LOG_DIR)
+                    run.external_log.append(f'\n--- {rel_path} ---\n{content}')
+            except (OSError, UnicodeDecodeError):
+                continue
 
     def _safe_script_dir(self, script_rel_path):
         if not script_rel_path:
