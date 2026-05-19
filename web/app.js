@@ -26,11 +26,8 @@ const els = {
   doc: $('doc'),
   run: $('runBtn'),
   stop: $('stopBtn'),
-  reset: $('resetBtn'),
   log: $('terminal'),
   logHint: $('logHint'),
-  clearLog: $('clearLogBtn'),
-  copyLog: $('copyLogBtn'),
   analyze: $('analyzeBtn'),
   aiReviewPanel: $('aiReviewPanel'),
   aiReview: $('aiReview'),
@@ -40,9 +37,6 @@ const els = {
   toast: $('toast'),
   sideTitle: $('sideTitle'),
   sidePanel: $('sidePanel'),
-  resultPanel: $('resultPanel'),
-  resultTitle: $('resultTitle'),
-  resultSummary: $('resultSummary'),
   precheck: $('precheckText'),
 };
 let term = null;
@@ -57,9 +51,6 @@ els.search.addEventListener('input', () => renderTree());
 els.refresh.addEventListener('click', init);
 els.run.addEventListener('click', runSelectedScript);
 els.stop.addEventListener('click', stopCurrentScript);
-els.reset.addEventListener('click', resetForm);
-els.clearLog.addEventListener('click', () => setLog(''));
-els.copyLog.addEventListener('click', copyLog);
 if (els.analyze) els.analyze.addEventListener('click', analyzeCurrentRun);
 els.toggleDoc.addEventListener('click', toggleDoc);
 document.querySelectorAll('[data-ai-action]').forEach((btn) => {
@@ -102,7 +93,7 @@ async function switchActivityView(view) {
     return;
   }
   if (view === 'run') renderSidePanel([
-    sideCard('当前工具', state.selectedNode ? state.selectedNode.name : '尚未选择工具', state.selectedPath ? '可以开始运行，也可以随时停止。' : '请先在工具列表中选择一个工具。', '运行选中工具', () => els.run.click()),
+    sideCard('当前工具', state.selectedNode ? state.selectedNode.name : '尚未选择工具', state.selectedPath ? '可以点击底部运行，也可以随时停止。' : '请先在工具列表中选择一个工具。', '运行选中工具', () => els.run.click()),
     sideCard('执行过程', '底部会显示执行记录', '运行中的输出会实时显示，方便复制给他人排查。', '查看执行过程', () => term?.focus()),
   ]);
   if (view === 'ai') renderSidePanel([
@@ -232,8 +223,7 @@ async function selectScript(node) {
   setTerminalTitle(`已选择 ${node.name}`);
   els.title.textContent = node.name;
   els.path.textContent = node.path;
-  if (els.resultPanel) els.resultPanel.classList.add('hidden');
-  if (els.precheck) els.precheck.textContent = '请确认必填信息已填写，然后点击开始运行。';
+  if (els.precheck) els.precheck.textContent = '请确认必填信息已填写，然后点击底部“运行”。';
   els.empty.classList.add('hidden');
   els.task.classList.remove('hidden');
   els.readmePanel.classList.add('hidden');
@@ -268,7 +258,7 @@ function renderForm(fields) {
   if (!fields.length) {
     const empty = document.createElement('div');
     empty.className = 'field full';
-    empty.innerHTML = '<small>该工具没有需要填写的信息，点击“开始运行”即可执行。</small>';
+    empty.innerHTML = '<small>该工具没有需要填写的信息，点击底部“运行”即可执行。</small>';
     els.form.appendChild(empty);
     return;
   }
@@ -400,7 +390,6 @@ function validateForm() {
 async function runSelectedScript(event) {
   event.preventDefault();
   if (!state.selectedPath || state.running || !validateForm()) return;
-  if (els.resultPanel) els.resultPanel.classList.add('hidden');
   setRunning(true);
   setRunState('running', '运行中');
   setTerminalTitle(`正在运行 ${state.selectedPath}`);
@@ -418,7 +407,7 @@ async function runSelectedScript(event) {
   els.aiReviewPanel.classList.add('hidden');
   setRunning(false);
   setRunState('running', '已开始');
-  showToast('工具已开始运行');
+  showToast('工具已开始执行');
 }
 
 async function analyzeCurrentRun() {
@@ -470,19 +459,16 @@ async function runAiQuickAction(action, button) {
 
 async function stopCurrentScript() {
   const res = await window.pywebview.api.stop_current();
+  setRunning(false);
+  setRunState('idle', '已停止');
+  els.logHint.textContent = '已请求停止。';
   showToast(res.data || res.error || '已请求停止');
-}
-
-function resetForm() {
-  renderForm(state.fields);
-  showToast('信息已恢复默认值');
 }
 
 function setRunning(running) {
   state.running = running;
   els.run.disabled = running;
   els.stop.disabled = false;
-  els.reset.disabled = running;
   els.search.disabled = running;
 }
 
@@ -561,22 +547,7 @@ function updateCompletionFromOutput() {
   const completed = /\n\$\s*$|process finished|exit code|退出码|completed|完成|success|成功/.test(lower);
   if (!completed || state.running) return;
   setRunState('success', '已完成');
-  if (els.resultPanel) {
-    els.resultTitle.textContent = '处理完成';
-    els.resultSummary.textContent = '执行已结束，请查看下方执行记录或输出报告。';
-    els.resultPanel.classList.remove('hidden');
-  }
-}
-
-async function copyLog() {
-  const text = terminalTranscript;
-  if (!text) return showToast('暂无日志可复制');
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast('日志已复制');
-  } catch {
-    showToast('复制失败，可手动选中日志复制');
-  }
+  els.logHint.textContent = '处理完成。';
 }
 
 function showToast(message) {
@@ -695,10 +666,19 @@ function renderMarkdown(markdown) {
 
 async function renderMermaidDiagrams() {
   if (!window.mermaid) return;
-  try {
-    await window.mermaid.run({ nodes: els.doc.querySelectorAll('.mermaid') });
-  } catch (error) {
-    showToast(`流程图渲染失败：${error.message || error}`);
+  const nodes = Array.from(els.doc.querySelectorAll('.mermaid'));
+  for (const node of nodes) {
+    const source = node.textContent || '';
+    const id = `mermaid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    try {
+      const result = await window.mermaid.render(id, source);
+      node.innerHTML = result.svg;
+      if (result.bindFunctions) result.bindFunctions(node);
+    } catch (error) {
+      node.className = 'mermaid-error';
+      node.innerHTML = `<strong>流程图渲染失败</strong><p>README.md 中的 Mermaid 图表语法不兼容当前版本。</p><pre>${escapeHtml(source)}</pre>`;
+      showToast('流程图渲染失败，请检查 README.md 中的 Mermaid 语法');
+    }
   }
 }
 

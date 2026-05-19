@@ -49,17 +49,7 @@
               <section id="emptyState" class="empty-state">
                 <div class="empty-icon">▶</div>
                 <h3>选择工具，填写信息，然后开始</h3>
-                <p>不需要输入命令。执行过程会显示在底部，完成后可以复制记录。</p>
-              </section>
-
-              <section id="resultPanel" class="result-panel hidden">
-                <h3 id="resultTitle">处理完成</h3>
-                <p id="resultSummary">执行已完成，请查看输出记录或打开生成的报告。</p>
-                <div class="result-grid">
-                  <div class="result-stat"><span>状态</span><b>已完成</b></div>
-                  <div class="result-stat"><span>记录</span><b>已生成</b></div>
-                  <div class="result-stat"><span>下一步</span><b>查看结果</b></div>
-                </div>
+                <p>不需要输入命令。填写完成后，点击底部“运行”。</p>
               </section>
 
               <section id="taskPanel" class="task-panel hidden">
@@ -68,11 +58,6 @@
                     <div>
                       <h3>填写信息</h3>
                       <p class="muted">按提示填写即可，不需要了解代码或命令。</p>
-                    </div>
-                    <div class="actions">
-                      <button id="resetBtn" class="ghost">重置</button>
-                      <button id="runBtn" class="primary">开始运行</button>
-                      <button id="stopBtn" class="danger">停止</button>
                     </div>
                   </div>
                   <form id="configForm" class="form"></form>
@@ -84,7 +69,7 @@
                   <div class="card-header compact">
                     <div>
                       <h3>使用说明</h3>
-                      <p class="muted">当前工具的用途、操作步骤和安全说明。</p>
+                      <p class="muted">解析当前工具目录下真实 README.md。</p>
                     </div>
                     <button id="toggleDocBtn" class="text-button">收起</button>
                   </div>
@@ -124,8 +109,8 @@
               <b>执行过程</b>
               <span id="logHint" class="terminal-hint">等待开始。</span>
               <div class="actions terminal-actions">
-                <button id="copyLogBtn" class="ghost">复制记录</button>
-                <button id="clearLogBtn" class="ghost">清空</button>
+                <button id="runBtn" class="primary">运行</button>
+                <button id="stopBtn" class="danger">停止</button>
               </div>
             </div>
             <div class="terminal-window">
@@ -135,7 +120,7 @@
         </main>
       </div>
 
-      <footer class="statusbar"><span>CedarEx 工具台</span><span>智能助手已就绪 · UTF-8</span></footer>
+      <footer class="statusbar"><span>CedarEx 工具台</span><span>智能助手已就绪</span></footer>
     </div>
     <div id="toast" class="toast hidden"></div>
     <script src="vendor/mermaid.min.js"></script>
