@@ -3,41 +3,90 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CedarEx 脚本执行器</title>
+    <title>CedarEx</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <aside class="sidebar">
-      <h1>CedarEx</h1>
-      <p>离线脚本执行器</p>
-      <div id="scriptTree" class="script-tree"></div>
-    </aside>
-
-    <main class="main">
-      <section class="panel">
-        <div class="panel-header">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">C</div>
           <div>
-            <h2 id="scriptTitle">请选择脚本</h2>
-            <p id="scriptPath" class="muted"></p>
-          </div>
-          <div class="actions">
-            <button id="runBtn" disabled>运行脚本</button>
-            <button id="stopBtn" class="secondary">停止</button>
+            <h1>CedarEx</h1>
+            <p>本地脚本工作台</p>
           </div>
         </div>
-        <pre id="doc" class="doc hidden"></pre>
-        <form id="configForm" class="form"></form>
-      </section>
 
-      <section class="panel log-panel">
-        <div class="panel-header compact">
-          <h2>日志输出</h2>
-          <span id="status" class="status">空闲</span>
+        <label class="search-box" aria-label="搜索脚本">
+          <span>⌕</span>
+          <input id="scriptSearch" placeholder="搜索脚本名称..." autocomplete="off" />
+        </label>
+
+        <div class="sidebar-meta">
+          <span id="scriptCount">0 个脚本</span>
+          <button id="refreshBtn" class="text-button">刷新</button>
         </div>
-        <pre id="log" class="log"></pre>
-      </section>
-    </main>
+        <nav id="scriptTree" class="script-tree" aria-label="脚本列表"></nav>
+      </aside>
 
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">当前任务</div>
+            <h2 id="scriptTitle">选择一个脚本开始</h2>
+            <p id="scriptPath" class="muted">左侧选择脚本后，会自动生成参数表单。</p>
+          </div>
+          <div class="run-state" id="runState">空闲</div>
+        </header>
+
+        <section id="emptyState" class="empty-state">
+          <div class="empty-icon">▶</div>
+          <h3>选择脚本，填写参数，然后运行</h3>
+          <p>界面会保留 Python 脚本执行能力，并在下方实时显示日志。</p>
+        </section>
+
+        <section id="taskPanel" class="task-grid hidden">
+          <article class="card form-card">
+            <div class="card-header">
+              <div>
+                <h3>参数配置</h3>
+                <p class="muted">确认路径、数值和开关后再执行。</p>
+              </div>
+              <div class="actions">
+                <button id="resetBtn" class="ghost">重置</button>
+                <button id="runBtn" class="primary">运行脚本</button>
+                <button id="stopBtn" class="danger" disabled>停止</button>
+              </div>
+            </div>
+            <form id="configForm" class="form"></form>
+          </article>
+
+          <article class="card doc-card">
+            <div class="card-header compact">
+              <h3>说明</h3>
+              <button id="toggleDocBtn" class="text-button">收起</button>
+            </div>
+            <pre id="doc" class="doc">暂无说明文档。</pre>
+          </article>
+        </section>
+
+        <section class="card log-card">
+          <div class="card-header compact">
+            <div>
+              <h3>执行日志</h3>
+              <p id="logHint" class="muted">运行脚本后日志会显示在这里。</p>
+            </div>
+            <div class="actions">
+              <button id="copyLogBtn" class="ghost">复制日志</button>
+              <button id="clearLogBtn" class="ghost">清空</button>
+            </div>
+          </div>
+          <pre id="log" class="log"></pre>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
     <script src="app.js"></script>
   </body>
-  </html>
+</html>
