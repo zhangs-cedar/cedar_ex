@@ -1,0 +1,69 @@
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --primary: #2563eb;
+  --border: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.sidebar {
+  width: 330px;
+  padding: 24px;
+  background: #111827;
+  color: white;
+  overflow: auto;
+}
+.sidebar h1 { margin: 0 0 4px; }
+.sidebar p { margin: 0 0 20px; color: #9ca3af; }
+
+.script-item {
+  width: 100%;
+  margin: 4px 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+  color: #d1d5db;
+  background: transparent;
+  cursor: pointer;
+}
+.script-item:hover, .script-item.active { background: #374151; color: white; }
+.script-item.disabled { cursor: default; color: #6b7280; font-weight: 600; }
+.script-children { margin-left: 14px; border-left: 1px solid #374151; padding-left: 10px; }
+
+.main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06); }
+.panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.panel-header.compact { margin-bottom: 8px; }
+h2 { margin: 0; font-size: 20px; }
+.muted { color: var(--muted); margin: 6px 0 0; }
+.actions { display: flex; gap: 10px; }
+button { border: 0; border-radius: 10px; padding: 10px 16px; background: var(--primary); color: white; cursor: pointer; font-weight: 600; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary { background: #6b7280; }
+
+.doc { max-height: 160px; overflow: auto; padding: 12px; background: #f9fafb; border: 1px solid var(--border); border-radius: 10px; white-space: pre-wrap; }
+.hidden { display: none; }
+.form { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 14px 20px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 600; }
+.field small { color: var(--muted); }
+input, select, textarea { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; font: inherit; }
+textarea { min-height: 92px; }
+.checkbox-field { flex-direction: row; align-items: center; }
+.checkbox-field input { width: auto; }
+
+.log-panel { flex: 1; min-height: 260px; display: flex; flex-direction: column; }
+.status { color: var(--muted); }
+.log { flex: 1; margin: 0; overflow: auto; padding: 14px; background: #0b1020; color: #d1e7ff; border-radius: 10px; white-space: pre-wrap; }

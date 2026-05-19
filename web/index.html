@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CedarEx 脚本执行器</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <h1>CedarEx</h1>
+      <p>离线脚本执行器</p>
+      <div id="scriptTree" class="script-tree"></div>
+    </aside>
+
+    <main class="main">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 id="scriptTitle">请选择脚本</h2>
+            <p id="scriptPath" class="muted"></p>
+          </div>
+          <div class="actions">
+            <button id="runBtn" disabled>运行脚本</button>
+            <button id="stopBtn" class="secondary">停止</button>
+          </div>
+        </div>
+        <pre id="doc" class="doc hidden"></pre>
+        <form id="configForm" class="form"></form>
+      </section>
+
+      <section class="panel log-panel">
+        <div class="panel-header compact">
+          <h2>日志输出</h2>
+          <span id="status" class="status">空闲</span>
+        </div>
+        <pre id="log" class="log"></pre>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
