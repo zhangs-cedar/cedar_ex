@@ -59,6 +59,7 @@ els.toggleDoc.addEventListener('click', toggleDoc);
 async function init() {
   setRunState('loading', '加载中');
   await initTerminal();
+  els.stop.disabled = false;
   const res = await window.pywebview.api.get_scripts();
   if (!res.ok) {
     showToast(res.error || '脚本加载失败');
@@ -306,27 +307,12 @@ async function runSelectedScript(event) {
     showToast(res.error || '启动失败');
     return;
   }
-  state.runId = res.data.run_id;
+  state.runId = null;
   els.analyze.disabled = true;
   els.aiReviewPanel.classList.add('hidden');
-  state.polling = setInterval(pollStatus, 500);
-}
-
-async function pollStatus() {
-  if (!state.runId) return;
-  const res = await window.pywebview.api.get_run_status(state.runId);
-  if (!res.ok) return;
-  setLog(res.data.log || '');
-  if (res.data.finished) {
-    clearInterval(state.polling);
-    state.polling = null;
-    setRunning(false);
-    const ok = res.data.exit_code === 0;
-    setRunState(ok ? 'success' : 'error', ok ? '执行成功' : `失败：${res.data.exit_code}`);
-    setTerminalTitle(ok ? `completed — exit 0` : `failed — exit ${res.data.exit_code}`);
-    els.analyze.disabled = false;
-    showToast(ok ? '脚本执行完成' : '脚本执行失败，请查看日志');
-  }
+  setRunning(false);
+  setRunState('running', '已发送到终端');
+  showToast('脚本命令已发送到真实终端');
 }
 
 async function analyzeCurrentRun() {
@@ -361,7 +347,7 @@ function resetForm() {
 function setRunning(running) {
   state.running = running;
   els.run.disabled = running;
-  els.stop.disabled = !running;
+  els.stop.disabled = false;
   els.reset.disabled = running;
   els.search.disabled = running;
 }

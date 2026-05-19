@@ -245,9 +245,6 @@ class Api:
         return {'ok': True, 'data': {'path': script_rel_path, 'fields': fields, 'doc': doc}}
 
     def run_script(self, script_rel_path, config):
-        if self.current_run and self.current_run.process.poll() is None:
-            return {'ok': False, 'error': '已有脚本正在运行，请等待结束或先停止'}
-
         script_dir = self._safe_script_dir(script_rel_path)
         if not script_dir or not has_script_file(script_dir):
             return {'ok': False, 'error': '脚本不存在或不可运行'}
@@ -257,35 +254,23 @@ class Api:
         json.dump(config or {}, config_file, ensure_ascii=False, indent=2)
         config_file.close()
 
-        run_id = datetime.now().strftime('%Y%m%d_%H%M%S')
-        log_path = LOG_DIR / f'webview_{run_id}.log'
-        env = os.environ.copy()
-        env['SCRIPT_LOG_FILE'] = str(log_path)
-        env['CEDAR_BASE_DIR'] = str(BASE_DIR)
-
         if str(script_path).endswith(('.so', '.pyd')):
-            cmd = [sys.executable, '-c', self._compiled_runner_code(script_dir, config_file.name)]
+            runner = self._compiled_runner_code(script_dir, config_file.name)
+            runner_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py', encoding='utf-8')
+            runner_file.write(runner)
+            runner_file.close()
+            cmd = f'{self._shell_quote(sys.executable)} {self._shell_quote(runner_file.name)}'
         else:
-            cmd = [sys.executable, str(script_path), config_file.name]
+            cmd = f'{self._shell_quote(sys.executable)} {self._shell_quote(str(script_path))} {self._shell_quote(config_file.name)}'
 
-        with log_path.open('a', encoding='utf-8') as log_file:
-            log_file.write(f'启动脚本: {script_rel_path}\n命令: {cmd}\n\n')
-
-        process = subprocess.Popen(
-            cmd,
-            cwd=str(script_dir),
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
+        self.terminal_start()
+        terminal_cmd = (
+            f'cd {self._shell_quote(str(script_dir))}\n'
+            f'export CEDAR_BASE_DIR={self._shell_quote(str(BASE_DIR))}\n'
+            f'{cmd}\n'
         )
-        run = ScriptRun(run_id, process, log_path, config_file.name, Path(script_rel_path).name, script_rel_path, config)
-        self._init_log_offsets(run)
-        self.runs[run_id] = run
-        self.current_run = run
-        threading.Thread(target=self._pipe_output, args=(run,), daemon=True).start()
-        return {'ok': True, 'data': {'run_id': run_id}}
+        self.terminal.write(terminal_cmd)
+        return {'ok': True, 'data': {'command': cmd, 'config_file': config_file.name}}
 
     def get_run_status(self, run_id):
         run = self.runs.get(run_id)
@@ -358,10 +343,10 @@ class Api:
 """.strip()
 
     def stop_current(self):
-        if not self.current_run or self.current_run.process.poll() is not None:
-            return {'ok': True, 'data': '没有运行中的脚本'}
-        self.current_run.process.terminate()
-        return {'ok': True, 'data': '已发送停止信号'}
+        if self.terminal:
+            self.terminal.write('\x03')
+            return {'ok': True, 'data': '已向终端发送 Ctrl+C'}
+        return {'ok': True, 'data': '终端未启动'}
 
     def execute_command(self, command, cwd=None):
         """执行一条本地 shell 命令。
@@ -516,6 +501,11 @@ class Api:
         except ValueError:
             return None
         return script_dir
+
+    def _shell_quote(self, value):
+        import shlex
+
+        return shlex.quote(str(value))
 
     def _compiled_runner_code(self, script_dir, config_path):
         return f"""
