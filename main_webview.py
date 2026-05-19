@@ -274,6 +274,41 @@ class Api:
         items.sort(key=lambda item: item['modified'], reverse=True)
         return {'ok': True, 'data': items[:limit]}
 
+    def get_log_detail(self, log_rel_path, max_chars=120000):
+        """安全读取单个历史日志详情。"""
+        if not log_rel_path:
+            return {'ok': False, 'error': '日志路径为空'}
+        try:
+            max_chars = int(max_chars or 120000)
+        except (TypeError, ValueError):
+            max_chars = 120000
+        log_path = (LOG_DIR / log_rel_path).resolve()
+        try:
+            log_path.relative_to(LOG_DIR.resolve())
+        except ValueError:
+            return {'ok': False, 'error': '非法日志路径'}
+        if not log_path.exists() or not log_path.is_file():
+            return {'ok': False, 'error': '日志文件不存在'}
+        try:
+            stat = log_path.stat()
+            text = log_path.read_text(encoding='utf-8', errors='ignore')
+            clipped = len(text) > max_chars
+            if clipped:
+                text = text[-max_chars:]
+            return {
+                'ok': True,
+                'data': {
+                    'name': log_path.name,
+                    'path': str(log_path.relative_to(LOG_DIR)),
+                    'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(timespec='seconds'),
+                    'size': stat.st_size,
+                    'content': text,
+                    'clipped': clipped,
+                },
+            }
+        except OSError as e:
+            return {'ok': False, 'error': str(e)}
+
     def run_script(self, script_rel_path, config):
         script_dir = self._safe_script_dir(script_rel_path)
         if not script_dir or not has_script_file(script_dir):

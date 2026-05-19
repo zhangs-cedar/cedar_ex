@@ -35,6 +35,7 @@ const els = {
   aiReviewPanel: $('aiReviewPanel'),
   aiReview: $('aiReview'),
   toggleDoc: $('toggleDocBtn'),
+  readmePanel: $('readmePanel'),
   terminalTitle: $('terminalTitle'),
   toast: $('toast'),
   sideTitle: $('sideTitle'),
@@ -62,6 +63,9 @@ document.querySelectorAll('[data-ai-action]').forEach((btn) => {
 });
 document.querySelectorAll('[data-view]').forEach((btn) => {
   btn.addEventListener('click', () => switchActivityView(btn.dataset.view));
+});
+document.querySelectorAll('[data-editor-tab]').forEach((btn) => {
+  btn.addEventListener('click', () => switchEditorTab(btn.dataset.editorTab));
 });
 
 async function init() {
@@ -104,6 +108,14 @@ async function switchActivityView(view) {
   if (view === 'history') await renderHistoryPanel();
 }
 
+function switchEditorTab(tab) {
+  document.querySelectorAll('[data-editor-tab]').forEach((btn) => btn.classList.toggle('active', btn.dataset.editorTab === tab));
+  els.empty.classList.toggle('hidden', tab !== 'form' || Boolean(state.selectedPath));
+  els.task.classList.toggle('hidden', tab !== 'form' || !state.selectedPath);
+  els.readmePanel.classList.toggle('hidden', tab !== 'readme');
+  if (tab === 'history') switchActivityView('history');
+}
+
 function sideCard(title, headline, text, actionText, onClick) {
   const card = document.createElement('div');
   card.className = 'side-card';
@@ -138,12 +150,24 @@ async function renderHistoryPanel() {
     const btn = document.createElement('button');
     btn.className = 'history-item';
     btn.innerHTML = `${escapeHtml(item.path)}<small>${escapeHtml(item.modified)} · ${Math.round(item.size / 1024)} KB</small>`;
-    btn.addEventListener('click', () => {
-      els.aiReviewPanel.classList.remove('hidden');
-      els.aiReview.innerHTML = renderMarkdown(`### ${item.path}\n\n\`${item.modified}\`\n\n\`\`\`text\n${item.preview || '无预览'}\n\`\`\``);
-    });
+    btn.addEventListener('click', () => openRunDetail(item.path));
     els.sidePanel.appendChild(btn);
   });
+}
+
+async function openRunDetail(logPath) {
+  els.aiReviewPanel.classList.remove('hidden');
+  els.aiReview.innerHTML = '<p>正在加载运行详情...</p>';
+  const res = await window.pywebview.api.get_log_detail(logPath, 120000);
+  if (!res.ok) {
+    els.aiReview.innerHTML = renderMarkdown(`运行详情加载失败：${res.error || '未知错误'}`);
+    return;
+  }
+  const item = res.data;
+  const clipped = item.clipped ? '\n\n> 日志较长，当前仅展示最后一部分。' : '';
+  els.aiReview.innerHTML = renderMarkdown(`### Run Detail: ${item.path}\n\n- 修改时间：${item.modified}\n- 文件大小：${Math.round(item.size / 1024)} KB${clipped}\n\n\`\`\`text\n${item.content || '日志为空'}\n\`\`\``);
+  terminalTranscript = item.content || terminalTranscript;
+  els.analyze.disabled = false;
 }
 
 function flattenScripts(nodes, list = []) {
@@ -205,6 +229,8 @@ async function selectScript(node) {
   els.path.textContent = node.path;
   els.empty.classList.add('hidden');
   els.task.classList.remove('hidden');
+  els.readmePanel.classList.add('hidden');
+  document.querySelectorAll('[data-editor-tab]').forEach((btn) => btn.classList.toggle('active', btn.dataset.editorTab === 'form'));
 
   const res = await window.pywebview.api.get_script_detail(node.path);
   if (!res.ok) {

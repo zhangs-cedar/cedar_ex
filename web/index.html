@@ -40,9 +40,9 @@
 
         <main class="workspace">
           <div class="tabs">
-            <div class="tab active"><span id="scriptTitle">选择一个脚本开始</span></div>
-            <div class="tab">README Preview</div>
-            <div class="tab">Run History</div>
+            <button class="tab active" data-editor-tab="form"><span id="scriptTitle">选择一个脚本开始</span></button>
+            <button class="tab" data-editor-tab="readme">README Preview</button>
+            <button class="tab" data-editor-tab="history">Run History</button>
           </div>
 
           <section class="editor-area">
@@ -77,16 +77,26 @@
                   <form id="configForm" class="form"></form>
                 </article>
               </section>
+
+              <section id="readmePanel" class="readme-panel hidden">
+                <article class="card doc-card">
+                  <div class="card-header compact">
+                    <div>
+                      <h3>README Preview</h3>
+                      <p class="muted">当前脚本说明文档，支持 Markdown 和 Mermaid。</p>
+                    </div>
+                    <button id="toggleDocBtn" class="text-button">收起</button>
+                  </div>
+                  <div id="doc" class="doc markdown-body">暂无说明文档。</div>
+                </article>
+              </section>
             </section>
 
             <aside class="assistant-pane">
               <div class="assistant-title">AI Copilot Panel</div>
-              <article class="card doc-card">
-                <div class="card-header compact">
-                  <h3>脚本说明</h3>
-                  <button id="toggleDocBtn" class="text-button">收起</button>
-                </div>
-                <div id="doc" class="doc markdown-body">暂无说明文档。</div>
+              <article class="card ai-card">
+                <h3>上下文</h3>
+                <p class="muted">脚本说明已移至 README Preview。这里保留 AI 操作与运行诊断结果。</p>
               </article>
               <article id="aiReviewPanel" class="card ai-review-card hidden">
                 <div class="card-header compact">
