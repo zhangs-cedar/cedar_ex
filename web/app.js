@@ -37,6 +37,8 @@ const els = {
   toggleDoc: $('toggleDocBtn'),
   terminalTitle: $('terminalTitle'),
   toast: $('toast'),
+  sideTitle: $('sideTitle'),
+  sidePanel: $('sidePanel'),
 };
 let term = null;
 let terminalPoller = null;
@@ -58,6 +60,9 @@ els.toggleDoc.addEventListener('click', toggleDoc);
 document.querySelectorAll('[data-ai-action]').forEach((btn) => {
   btn.addEventListener('click', () => runAiQuickAction(btn.dataset.aiAction, btn));
 });
+document.querySelectorAll('[data-view]').forEach((btn) => {
+  btn.addEventListener('click', () => switchActivityView(btn.dataset.view));
+});
 
 async function init() {
   setRunState('loading', '加载中');
@@ -75,6 +80,70 @@ async function init() {
   renderTree();
   setRunState('idle', '空闲');
   setTerminalTitle('idle');
+}
+
+async function switchActivityView(view) {
+  document.querySelectorAll('[data-view]').forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
+  els.tree.classList.toggle('hidden', view !== 'explorer' && view !== 'search');
+  els.search.parentElement.classList.toggle('hidden', !['explorer', 'search'].includes(view));
+  els.sidePanel.classList.toggle('hidden', view === 'explorer' || view === 'search');
+  const titles = { explorer: '脚本资源管理器', run: '运行与调试', search: '搜索脚本', history: '运行历史', ai: 'AI 助手' };
+  els.sideTitle.textContent = titles[view] || '脚本资源管理器';
+  if (view === 'search') {
+    els.search.focus();
+    return;
+  }
+  if (view === 'run') renderSidePanel([
+    sideCard('当前脚本', state.selectedNode ? state.selectedNode.name : '尚未选择脚本', state.selectedPath ? '可运行、可停止，并可在底部终端继续交互。' : '请先在 Explorer 中选择一个脚本。', '运行选中脚本', () => els.run.click()),
+    sideCard('终端', '真实 PTY 已集成', '底部 Terminal 支持 zsh/bash/powershell 交互输入。', '聚焦终端', () => term?.focus()),
+  ]);
+  if (view === 'ai') renderSidePanel([
+    sideCard('AI 上下文', '脚本 + 参数 + README + 终端日志', '右侧快捷动作会自动打包上下文给 opencode。', '诊断日志', () => runAiQuickAction('diagnose_log', document.querySelector('[data-ai-action="diagnose_log"]'))),
+    sideCard('建议', '先运行脚本，再调用 AI Review', '这样 AI 能看到真实输出、错误栈和退出信息。', '打开 AI Review', () => els.aiReviewPanel.classList.remove('hidden')),
+  ]);
+  if (view === 'history') await renderHistoryPanel();
+}
+
+function sideCard(title, headline, text, actionText, onClick) {
+  const card = document.createElement('div');
+  card.className = 'side-card';
+  card.innerHTML = `<b>${escapeHtml(title)}</b><p><strong>${escapeHtml(headline)}</strong></p><p>${escapeHtml(text)}</p>`;
+  if (actionText) {
+    const btn = document.createElement('button');
+    btn.textContent = actionText;
+    btn.addEventListener('click', onClick);
+    card.appendChild(btn);
+  }
+  return card;
+}
+
+function renderSidePanel(nodes) {
+  els.sidePanel.innerHTML = '';
+  nodes.forEach((node) => els.sidePanel.appendChild(node));
+}
+
+async function renderHistoryPanel() {
+  els.sidePanel.innerHTML = '<div class="side-card"><p>正在加载最近日志...</p></div>';
+  const res = await window.pywebview.api.get_recent_logs(20);
+  if (!res.ok) {
+    els.sidePanel.innerHTML = `<div class="side-card"><p>${escapeHtml(res.error || '加载失败')}</p></div>`;
+    return;
+  }
+  els.sidePanel.innerHTML = '';
+  if (!res.data.length) {
+    els.sidePanel.innerHTML = '<div class="side-card"><p>暂无历史日志。</p></div>';
+    return;
+  }
+  res.data.forEach((item) => {
+    const btn = document.createElement('button');
+    btn.className = 'history-item';
+    btn.innerHTML = `${escapeHtml(item.path)}<small>${escapeHtml(item.modified)} · ${Math.round(item.size / 1024)} KB</small>`;
+    btn.addEventListener('click', () => {
+      els.aiReviewPanel.classList.remove('hidden');
+      els.aiReview.innerHTML = renderMarkdown(`### ${item.path}\n\n\`${item.modified}\`\n\n\`\`\`text\n${item.preview || '无预览'}\n\`\`\``);
+    });
+    els.sidePanel.appendChild(btn);
+  });
 }
 
 function flattenScripts(nodes, list = []) {
