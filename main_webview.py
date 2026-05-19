@@ -244,6 +244,36 @@ class Api:
 
         return {'ok': True, 'data': {'path': script_rel_path, 'fields': fields, 'doc': doc}}
 
+    def get_recent_logs(self, limit=20):
+        """返回 log/ 目录下最近的日志文件，用于运行历史视图。"""
+        try:
+            limit = int(limit or 20)
+        except (TypeError, ValueError):
+            limit = 20
+        if not LOG_DIR.exists():
+            return {'ok': True, 'data': []}
+        items = []
+        for path in LOG_DIR.rglob('*.log'):
+            try:
+                stat = path.stat()
+                preview = ''
+                try:
+                    text = path.read_text(encoding='utf-8', errors='ignore')
+                    preview = text[-300:].strip()
+                except OSError:
+                    preview = ''
+                items.append({
+                    'name': path.name,
+                    'path': str(path.relative_to(LOG_DIR)),
+                    'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(timespec='seconds'),
+                    'size': stat.st_size,
+                    'preview': preview,
+                })
+            except OSError:
+                continue
+        items.sort(key=lambda item: item['modified'], reverse=True)
+        return {'ok': True, 'data': items[:limit]}
+
     def run_script(self, script_rel_path, config):
         script_dir = self._safe_script_dir(script_rel_path)
         if not script_dir or not has_script_file(script_dir):
@@ -295,6 +325,108 @@ class Api:
             return status
         log = status['data']['log'] or ''
         prompt = self._build_opencode_review_prompt(run, log)
+        try:
+            result = subprocess.run(
+                ['opencode', 'run', prompt],
+                cwd=str(BASE_DIR),
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+            output = (result.stdout or '') + (result.stderr or '')
+            return {'ok': result.returncode == 0, 'error': '' if result.returncode == 0 else f'opencode 退出码: {result.returncode}', 'data': {'review': output, 'exit_code': result.returncode}}
+        except FileNotFoundError:
+            return {'ok': False, 'error': '未找到 opencode 命令，请先安装或配置 PATH'}
+        except subprocess.TimeoutExpired as e:
+            output = ((e.stdout or '') if isinstance(e.stdout, str) else '') + ((e.stderr or '') if isinstance(e.stderr, str) else '')
+            return {'ok': False, 'error': 'opencode 分析超时', 'data': {'review': output}}
+
+    def analyze_terminal_with_opencode(self, script_rel_path, config, terminal_log):
+        """基于当前终端内容做轻量 AI 诊断。"""
+        max_chars = 24000
+        log = (terminal_log or '')[-max_chars:]
+        prompt = f"""
+你是 CedarEx 本地脚本运行诊断助手。请只分析当前终端内容，不要修改文件，不要执行命令。
+
+请用中文输出：
+1. 结论：成功 / 失败 / 不确定
+2. 关键证据：引用终端中的关键信息
+3. 风险与异常：列出错误、告警、可疑点
+4. 下一步建议：给出可操作建议
+
+当前脚本：
+{script_rel_path or '未选择'}
+
+当前参数：
+{json.dumps(config or {}, ensure_ascii=False, indent=2)}
+
+终端最近内容：
+```text
+{log}
+```
+""".strip()
+        try:
+            result = subprocess.run(
+                ['opencode', 'run', prompt],
+                cwd=str(BASE_DIR),
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+            output = (result.stdout or '') + (result.stderr or '')
+            return {'ok': result.returncode == 0, 'error': '' if result.returncode == 0 else f'opencode 退出码: {result.returncode}', 'data': {'review': output, 'exit_code': result.returncode}}
+        except FileNotFoundError:
+            return {'ok': False, 'error': '未找到 opencode 命令，请先安装或配置 PATH'}
+        except subprocess.TimeoutExpired as e:
+            output = ((e.stdout or '') if isinstance(e.stdout, str) else '') + ((e.stderr or '') if isinstance(e.stderr, str) else '')
+            return {'ok': False, 'error': 'opencode 分析超时', 'data': {'review': output}}
+
+    def ai_assist(self, payload):
+        payload = payload or {}
+        action = payload.get('action') or 'diagnose_log'
+        action_map = {
+            'explain_params': '解释当前脚本参数：逐项说明用途、默认值风险、必填项和建议填写方式。',
+            'generate_command': '根据当前参数生成可复制的终端命令，并说明命令中的关键参数。',
+            'diagnose_log': '诊断当前终端日志：判断是否成功、指出异常、给出下一步建议。',
+            'create_template': '基于当前脚本信息生成一个新脚本模板建议，包括 README、form.yaml 字段和 main.py 结构。',
+        }
+        task = action_map.get(action, action_map['diagnose_log'])
+        terminal_log = (payload.get('terminal_log') or '')[-16000:]
+        doc = (payload.get('doc') or '')[:8000]
+        prompt = f"""
+你是 CedarEx 脚本工作台内置 AI 助手。请只基于给定上下文回答，不要修改文件，不要执行命令。
+
+任务：
+{task}
+
+输出要求：
+- 使用中文。
+- 给出可操作结果，不要泛泛而谈。
+- 如果信息不足，明确说明缺少什么。
+
+脚本名称：{payload.get('script_name') or '未选择'}
+脚本路径：{payload.get('script_path') or '未选择'}
+
+form.yaml 字段：
+```json
+{json.dumps(payload.get('fields') or [], ensure_ascii=False, indent=2)}
+```
+
+当前参数：
+```json
+{json.dumps(payload.get('config') or {}, ensure_ascii=False, indent=2)}
+```
+
+README/说明摘要：
+```text
+{doc}
+```
+
+终端最近内容：
+```text
+{terminal_log}
+```
+""".strip()
         try:
             result = subprocess.run(
                 ['opencode', 'run', prompt],

@@ -55,6 +55,9 @@ els.clearLog.addEventListener('click', () => setLog(''));
 els.copyLog.addEventListener('click', copyLog);
 els.analyze.addEventListener('click', analyzeCurrentRun);
 els.toggleDoc.addEventListener('click', toggleDoc);
+document.querySelectorAll('[data-ai-action]').forEach((btn) => {
+  btn.addEventListener('click', () => runAiQuickAction(btn.dataset.aiAction, btn));
+});
 
 async function init() {
   setRunState('loading', '加载中');
@@ -308,7 +311,7 @@ async function runSelectedScript(event) {
     return;
   }
   state.runId = null;
-  els.analyze.disabled = true;
+  els.analyze.disabled = false;
   els.aiReviewPanel.classList.add('hidden');
   setRunning(false);
   setRunState('running', '已发送到终端');
@@ -316,11 +319,13 @@ async function runSelectedScript(event) {
 }
 
 async function analyzeCurrentRun() {
-  if (!state.runId) return showToast('暂无可分析的运行记录');
+  if (!state.runId && !terminalTranscript.trim()) return showToast('暂无可分析的终端内容');
   els.analyze.disabled = true;
   els.aiReviewPanel.classList.remove('hidden');
   els.aiReview.innerHTML = '<p>opencode 正在分析本次运行，请稍候...</p>';
-  const res = await window.pywebview.api.analyze_run_with_opencode(state.runId);
+  const res = state.runId
+    ? await window.pywebview.api.analyze_run_with_opencode(state.runId)
+    : await window.pywebview.api.analyze_terminal_with_opencode(state.selectedPath, collectConfig(), terminalTranscript);
   if (res.ok) {
     els.aiReview.innerHTML = renderMarkdown(res.data.review || 'opencode 未返回分析内容。');
     renderMermaidDiagrams();
@@ -333,8 +338,34 @@ async function analyzeCurrentRun() {
   els.analyze.disabled = false;
 }
 
+async function runAiQuickAction(action, button) {
+  if (!window.pywebview?.api?.ai_assist) return showToast('AI 助手接口不可用');
+  button.disabled = true;
+  els.aiReviewPanel.classList.remove('hidden');
+  els.aiReview.innerHTML = '<p>opencode 正在处理快捷动作，请稍候...</p>';
+  const docText = els.doc.innerText || '';
+  const res = await window.pywebview.api.ai_assist({
+    action,
+    script_path: state.selectedPath,
+    script_name: state.selectedNode?.name || '',
+    fields: state.fields,
+    config: collectConfig(),
+    doc: docText,
+    terminal_log: terminalTranscript,
+  });
+  if (res.ok) {
+    els.aiReview.innerHTML = renderMarkdown(res.data.review || 'opencode 未返回内容。');
+    renderMermaidDiagrams();
+    showToast('AI 快捷动作完成');
+  } else {
+    const review = res.data?.review ? `\n\n${res.data.review}` : '';
+    els.aiReview.innerHTML = renderMarkdown(`AI 快捷动作失败：${res.error}${review}`);
+    showToast(res.error || 'AI 快捷动作失败');
+  }
+  button.disabled = false;
+}
+
 async function stopCurrentScript() {
-  if (!state.running) return;
   const res = await window.pywebview.api.stop_current();
   showToast(res.data || res.error || '已请求停止');
 }
@@ -390,6 +421,7 @@ async function initTerminal() {
     return;
   }
   setTerminalTitle(`pty — ${started.data.platform}`);
+  els.analyze.disabled = false;
   term.onData((data) => window.pywebview.api.terminal_write(data));
   terminalPoller = setInterval(async () => {
     const res = await window.pywebview.api.terminal_read();
