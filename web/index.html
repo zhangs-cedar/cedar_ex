@@ -24,13 +24,14 @@
             <span id="scriptCount">0 个工具</span>
             <button id="refreshBtn" class="text-button">刷新</button>
           </div>
+          <div class="folder-title">▾ 常用工具</div>
           <nav id="scriptTree" class="script-tree" aria-label="工具列表"></nav>
           <div id="sidePanel" class="side-panel hidden"></div>
         </aside>
 
         <main class="workspace">
           <div class="tabs">
-            <button class="tab active" data-editor-tab="form"><span id="scriptTitle">选择一个工具开始</span></button>
+            <button class="tab active" data-editor-tab="form">填写信息</button>
             <button class="tab" data-editor-tab="readme">使用说明</button>
             <button class="tab" data-editor-tab="history">运行记录</button>
           </div>
@@ -40,6 +41,7 @@
               <header class="topbar">
                 <div>
                   <div class="eyebrow">当前任务</div>
+                  <b id="taskName" class="task-name">选择一个工具开始</b>
                   <p id="scriptPath" class="muted">左侧选择工具后，会自动生成需要填写的信息。</p>
                 </div>
                 <div class="run-state" id="runState">空闲</div>
@@ -54,6 +56,11 @@
               <section id="resultPanel" class="result-panel hidden">
                 <h3 id="resultTitle">处理完成</h3>
                 <p id="resultSummary">执行已完成，请查看输出记录或打开生成的报告。</p>
+                <div class="result-grid">
+                  <div class="result-stat"><span>状态</span><b>已完成</b></div>
+                  <div class="result-stat"><span>记录</span><b>已生成</b></div>
+                  <div class="result-stat"><span>下一步</span><b>查看结果</b></div>
+                </div>
               </section>
 
               <section id="taskPanel" class="task-panel hidden">

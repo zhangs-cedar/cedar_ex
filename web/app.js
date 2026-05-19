@@ -17,7 +17,7 @@ const els = {
   search: $('scriptSearch'),
   count: $('scriptCount'),
   refresh: $('refreshBtn'),
-  title: $('scriptTitle'),
+  title: $('taskName'),
   path: $('scriptPath'),
   state: $('runState'),
   empty: $('emptyState'),
