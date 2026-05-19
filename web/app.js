@@ -500,7 +500,7 @@ async function initTerminal() {
     convertEol: true,
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
     fontSize: 13,
-    theme: { background: '#050816', foreground: '#d1d5db', cursor: '#22c55e', selectionBackground: '#2563eb66' },
+    theme: { background: '#fbfbfb', foreground: '#24292f', cursor: '#0969da', selectionBackground: '#0969da33' },
   });
   term.open(els.log);
   const cols = term.cols || 100;
