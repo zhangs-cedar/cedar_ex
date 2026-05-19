@@ -106,15 +106,11 @@ export class Sidecar {
     })
   }
 
-  private handleMessage(msg: { id?: number; result?: unknown; error?: string }): void {
+  private handleMessage(msg: { id?: number; ok?: boolean; data?: unknown; error?: string }): void {
     if (msg.id !== undefined && this.pending.has(msg.id)) {
       const p = this.pending.get(msg.id)!
       this.pending.delete(msg.id)
-      if (msg.error) {
-        p.reject(new Error(msg.error))
-      } else {
-        p.resolve(msg.result)
-      }
+      p.resolve({ ok: msg.ok ?? !msg.error, data: msg.data, error: msg.error })
     }
   }
 

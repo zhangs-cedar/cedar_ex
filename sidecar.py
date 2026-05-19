@@ -58,11 +58,20 @@ class SidecarApi:
         try:
             if not self._terminal:
                 self._terminal = TerminalSession(BASE_DIR)
+                self._api.terminal = self._terminal
             self._terminal.start(int(cols or 100), int(rows or 30))
             import platform
             return {'ok': True, 'data': {'cwd': str(BASE_DIR), 'platform': platform.system()}}
         except Exception as e:
             return {'ok': False, 'error': str(e)}
+
+    def run_script(self, script_rel_path, config):
+        """通过共享 PTY 运行脚本，确保 Electron 终端能读到输出。"""
+        started = self.terminal_start()
+        if not started.get('ok'):
+            return started
+        self._api.terminal = self._terminal
+        return self._api.run_script(script_rel_path, config)
 
     def terminal_read(self):
         if not self._terminal:
@@ -84,6 +93,7 @@ class SidecarApi:
         if self._terminal:
             self._terminal.stop()
             self._terminal = None
+            self._api.terminal = None
         return {'ok': True}
 
     def stop_current(self):

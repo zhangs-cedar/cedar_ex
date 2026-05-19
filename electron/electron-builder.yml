@@ -9,6 +9,8 @@ files:
 extraResources:
   - from: ../sidecar.py
     to: sidecar.py
+  - from: ../main_webview.py
+    to: main_webview.py
   - from: ../scripts
     to: scripts
   - from: ../tools

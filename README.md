@@ -2,17 +2,23 @@
 
 ## 项目简介
 
-CedarEx 是一个基于 PyQt6 的桌面应用，面向自动化脚本的统一管理、配置和执行。用户可通过可视化界面，便捷地选择、配置和运行各类 Python 脚本，并实时查看日志输出，适用于数据分析、批处理等多种场景。
+CedarEx 是一个基于 Electron + Python sidecar 的桌面应用，面向自动化脚本的统一管理、配置和执行。用户可通过可视化界面，便捷地选择、配置和运行各类 Python 脚本，并实时查看日志输出，适用于数据分析、批处理等多种场景。
 
 ---
 
 ## 快速开始
 
 ### 运行方式
-   进入项目根目录，执行：
-   ```shell
-   python main.py
-   ```
+进入 Electron 工程目录，安装依赖并启动：
+
+```shell
+cd electron
+npm install
+npm run dev
+```
+
+Electron 主进程会自动启动项目根目录下的 `sidecar.py`，通过 stdio JSON-RPC 调用 Python 后端能力。
+
 ## 环境配置
 - 推荐使用项目内置的env环境，避免依赖冲突
 **注意**：建议将conda环境创建在项目目录下，且命名为`env`，这样项目可以自动识别并使用该环境。
@@ -66,12 +72,12 @@ pip install -r requirements.txt
 ## 目录结构说明
 
 ```yaml
-main.py                # 主程序入口
-start.bat / start.vbs  # 一键启动脚本
-app_ui/                # 前端界面与核心逻辑
+electron/              # Electron 主程序、预加载脚本与 React 渲染端
+sidecar.py             # Python sidecar，提供脚本发现、运行、终端和 AI 接口
+main_webview.py        # Python 后端 API 复用层，保留 pywebview 旧入口
 scripts/               # 用户自定义脚本目录（每个子目录为一个脚本项目）
 log/                   # 日志输出目录
-env/                   # 内置Python环境（建议conda环境创建在项目目录下，且命名为env）
+env/                   # 内置 Python 环境（建议 conda 环境创建在项目目录下，且命名为 env）
 tools/                 # 工具脚本目录
 ```
 
@@ -87,4 +93,4 @@ tools/                 # 工具脚本目录
 
 ---
 
-如需详细开发或二次集成，请参考 `app_ui/` 目录下各模块源码。 
+如需详细开发或二次集成，请参考 `electron/` 与 `sidecar.py`。
