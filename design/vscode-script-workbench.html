@@ -3,46 +3,80 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CedarEx 当前效果设计图</title>
+  <title>CedarEx 交互设计图</title>
   <style>
-    :root {
-      --bg:#1e1e1e; --chrome:#3a3a3a; --side:#252526; --activity:#181818;
-      --editor:#1f1f1f; --panel:#050817; --border:#3f3f46; --soft:#2d2d30;
-      --text:#d4d4d4; --muted:#9a9a9a; --blue:#0e88d3; --cyan:#9cdcfe;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:#111;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
-    .frame{width:1440px;height:900px;margin:0 auto;background:var(--bg);display:grid;grid-template-rows:34px 1fr 24px;box-shadow:0 22px 80px rgba(0,0,0,.5)}
-    .titlebar{background:var(--chrome);display:grid;grid-template-columns:250px 1fr 310px;align-items:center;padding:0 10px;font-size:12px;color:#bdbdbd;border-bottom:1px solid #2b2b2b}
-    .traffic{display:flex;gap:8px}.traffic span{width:12px;height:12px;border-radius:50%;display:block}.red{background:#ff5f57}.yellow{background:#ffbd2e}.green{background:#28c840}
-    .command{justify-self:center;width:560px;height:24px;border:1px solid #666;border-radius:4px;background:#444;display:grid;place-items:center;color:#ddd}.env{text-align:right}
-    .main{min-height:0;display:grid;grid-template-columns:48px 300px 1fr}
-    .activity{background:var(--activity);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:28px}.activity .icon{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;color:#c7c7c7;font-size:17px}.activity .active{outline:1px solid #dcdcdc;background:#333}.activity .ai{margin-top:auto;color:var(--cyan);font-weight:700;font-size:12px}
-    .sidebar{background:var(--side);border-right:1px solid var(--border);padding:15px 10px 0}.side-title{font-size:12px;color:#bdbdbd;margin:0 0 16px 4px}.search{height:30px;border:1px solid #4b4b4b;border-radius:4px;background:#2d2d30;color:#8f8f8f;padding:0 12px;font-size:18px;display:flex;align-items:center;gap:10px}.side-row{margin-top:16px;font-size:12px;color:#9a9a9a;display:flex;justify-content:space-between}.refresh{color:var(--cyan)}
-    .work{min-width:0;display:grid;grid-template-rows:36px 1fr 310px}.tabs{display:flex;background:#2b2b2b;border-bottom:1px solid var(--border)}.tab{height:36px;padding:9px 14px;border-right:1px solid #3a3a3a;color:#a6a6a6;font-size:13px}.tab.active{background:#1f1f1f;color:#fff}
-    .content{min-height:0;display:grid;grid-template-columns:1fr 392px;border-bottom:1px solid var(--border)}.editor{padding:18px;background:var(--editor);overflow:hidden}.taskbar{height:54px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}.taskbar b{color:var(--cyan);font-size:13px}.taskbar p{margin:5px 0 0;color:#9a9a9a;font-size:13px}.empty-pill{background:#16445a;color:#bfeaff;border-radius:18px;padding:6px 14px;font-size:13px}
-    .empty{height:258px;margin-top:14px;border:1px dashed #555;border-radius:8px;display:grid;place-items:center;text-align:center}.play{width:58px;height:58px;margin:0 auto 24px;border-radius:12px;background:#2d2d3a;color:#9cdcfe;font-size:28px;display:grid;place-items:center}.empty h1{font-size:22px;margin:0 0 24px;color:#f1f1f1}.empty p{margin:0;color:#aaa;font-size:16px}
-    .assistant{background:#1d1d1d;border-left:1px solid var(--border);padding:18px 16px}.assist-title{font-size:13px;color:#bdbdbd;letter-spacing:.04em;margin-bottom:12px;text-transform:uppercase}.card{border:1px solid var(--border);border-radius:5px;background:#242424;margin-bottom:12px;padding:14px}.card-head{display:flex;justify-content:space-between;font-weight:700;color:#fff;margin-bottom:14px}.collapse{color:var(--cyan)}.box{border:1px solid #3d3d3d;background:#1b1b1b;border-radius:4px;padding:13px;color:#bdbdbd;font-size:13px}.chips{display:flex;gap:10px;flex-wrap:wrap}.chip{border:1px solid #4c4c52;background:#303036;border-radius:999px;color:#cfcfcf;font-size:12px;padding:7px 10px}
-    .terminal{display:grid;grid-template-rows:35px 30px 1fr;background:var(--panel)}.panel-tabs{background:#171717;border-bottom:1px solid #2e2e2e;display:flex;align-items:center;gap:18px;padding:0 12px;font-size:12px;color:#aaa}.panel-tabs b{height:35px;display:flex;align-items:center;color:#fff;border-bottom:1px solid var(--blue)}.tools{margin-left:auto;display:flex;align-items:center;gap:10px;color:#aaa}.tool{border:1px solid #3b3b3b;background:#303030;border-radius:3px;padding:4px 8px;color:#dcdcdc;font-weight:700}.tool.disabled{opacity:.45}.term-title{background:#0b1220;border-bottom:1px solid #1d2945;display:grid;grid-template-columns:120px 1fr 120px;align-items:center;padding:0 12px;color:#8da0be;font:13px Consolas,monospace}.pty{justify-self:end;border:1px solid #164f73;background:#0c2a3e;color:#7dd3fc;border-radius:10px;padding:2px 8px;font-weight:700}.term-body{background:#050817}
-    .status{background:#0e88d3;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px}
+    :root{--bg:#1e1e1e;--top:#3a3a3a;--side:#252526;--act:#181818;--ed:#1f1f1f;--term:#050817;--bd:#3f3f46;--soft:#2d2d30;--text:#d4d4d4;--muted:#9a9a9a;--blue:#0e88d3;--cyan:#9cdcfe;--green:#89d185;--warn:#d7ba7d}
+    *{box-sizing:border-box}body{margin:0;background:#111;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.frame{width:1440px;height:900px;margin:0 auto;background:var(--bg);display:grid;grid-template-rows:34px 1fr 24px;box-shadow:0 22px 80px rgba(0,0,0,.5)}.titlebar{background:var(--top);display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #2b2b2b}.traffic{display:flex;gap:8px}.dot,.traffic span{width:12px;height:12px;border-radius:50%;display:inline-block}.red{background:#ff5f57}.yellow{background:#ffbd2e}.green{background:#28c840}.main{min-height:0;display:grid;grid-template-columns:48px 300px 1fr}.activity{background:var(--act);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:28px}.activity button{width:36px;height:36px;border:0;border-radius:8px;background:transparent;color:#c7c7c7;font-size:17px;cursor:pointer}.activity .active{outline:1px solid #dcdcdc;background:#333}.activity .ai{margin-top:auto;color:var(--cyan);font-weight:700;font-size:12px}
+    .sidebar{background:var(--side);border-right:1px solid var(--bd);padding:15px 10px 0;overflow:hidden}.side-title{font-size:12px;color:#bdbdbd;margin:0 0 16px 4px}.search{width:100%;height:32px;border:1px solid #4b4b4b;border-radius:4px;background:#2d2d30;color:#cfcfcf;padding:0 10px;font-size:13px}.side-row{margin:12px 0 10px;font-size:12px;color:#9a9a9a;display:flex;justify-content:space-between}.refresh{color:var(--cyan)}.folder{font-size:12px;color:#cfcfcf;margin:12px 0 6px}.script{width:100%;text-align:left;border:0;background:transparent;color:#cfcfcf;padding:8px 10px 8px 24px;border-radius:4px;cursor:pointer;font-size:13px;line-height:1.3}.script:hover{background:#2a2d2e}.script.active{background:#094771;color:white}.script small{display:block;color:#a8c7dd;margin-top:3px}.work{min-width:0;display:grid;grid-template-rows:36px 1fr 310px}.tabs{display:flex;background:#2b2b2b;border-bottom:1px solid var(--bd)}.tab{height:36px;padding:9px 16px;border:0;border-right:1px solid #3a3a3a;background:transparent;color:#a6a6a6;font-size:13px;cursor:pointer}.tab.active{background:#1f1f1f;color:#fff}.content{min-height:0;display:grid;grid-template-columns:1fr 360px;border-bottom:1px solid var(--bd)}.editor{padding:18px;background:var(--ed);overflow:auto}.taskbar{height:58px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between}.taskbar b{color:var(--cyan);font-size:13px}.taskbar p{margin:5px 0 0;color:#9a9a9a;font-size:13px}.pill{background:#16445a;color:#bfeaff;border-radius:18px;padding:6px 14px;font-size:13px}.empty{height:250px;margin-top:14px;border:1px dashed #555;border-radius:8px;display:grid;place-items:center;text-align:center}.play{width:58px;height:58px;margin:0 auto 24px;border-radius:12px;background:#2d2d3a;color:#9cdcfe;font-size:28px;display:grid;place-items:center}.empty h1{font-size:22px;margin:0 0 18px;color:#f1f1f1}.empty p{margin:0;color:#aaa;font-size:16px}.view{display:none}.view.active{display:block}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.field{border:1px solid var(--bd);background:#252526;border-radius:6px;padding:11px}.field.full{grid-column:1/-1}.field label{display:flex;justify-content:space-between;font-size:12px;color:#d4d4d4;margin-bottom:8px}.input,select{width:100%;height:34px;border:1px solid #454545;background:#313131;border-radius:4px;color:#ddd;padding:6px 8px}.path-row{display:grid;grid-template-columns:1fr 74px;gap:8px}.btn{border:1px solid #4b4b4b;background:#2d2d30;color:#ddd;border-radius:4px;padding:7px 12px;font-weight:700;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.danger{color:#f48771}.hint{margin-top:8px;color:#858585;font-size:12px}.actions{display:flex;gap:10px;margin-top:16px}.doc h2,.history h2{margin:16px 0 10px;font-size:20px;color:#fff}.doc p,.doc li{line-height:1.8;color:#c8c8c8}.doc-card,.record{border:1px solid var(--bd);background:#252526;border-radius:6px;padding:14px;margin-top:12px}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.step{border:1px solid #4b4b4b;background:#202020;border-radius:6px;padding:12px;text-align:center}.record{display:flex;justify-content:space-between;align-items:center}.ok{color:var(--green)}.bad{color:#f48771}
+    .assistant{background:#1d1d1d;border-left:1px solid var(--bd);padding:18px 16px}.assist-title{font-size:13px;color:#bdbdbd;letter-spacing:.04em;margin-bottom:12px}.card{border:1px solid var(--bd);border-radius:5px;background:#242424;margin-bottom:12px;padding:14px}.card h3{font-size:15px;margin:0 0 10px;color:#fff}.card p{font-size:13px;line-height:1.7;color:#bdbdbd;margin:0}.chips{display:flex;gap:10px;flex-wrap:wrap}.chip{border:1px solid #4c4c52;background:#303036;border-radius:999px;color:#cfcfcf;font-size:12px;padding:7px 10px;cursor:pointer}.terminal{display:grid;grid-template-rows:35px 30px 1fr;background:var(--term)}.panel-tabs{background:#171717;border-bottom:1px solid #2e2e2e;display:flex;align-items:center;gap:18px;padding:0 12px;font-size:12px;color:#aaa}.panel-tabs b{height:35px;display:flex;align-items:center;color:#fff;border-bottom:1px solid var(--blue)}.tools{margin-left:auto;display:flex;align-items:center;gap:10px;color:#aaa}.tool{border:1px solid #3b3b3b;background:#303030;border-radius:3px;padding:4px 8px;color:#dcdcdc;font-weight:700;cursor:pointer}.tool.disabled{opacity:.45}.term-title{background:#0b1220;border-bottom:1px solid #1d2945;display:grid;grid-template-columns:120px 1fr 120px;align-items:center;padding:0 12px;color:#8da0be;font:13px Consolas,monospace}.pty{justify-self:end;border:1px solid #164f73;background:#0c2a3e;color:#7dd3fc;border-radius:10px;padding:2px 8px;font-weight:700}.term-body{background:#050817;color:#d4d4d4;font:13px Consolas,"SFMono-Regular",monospace;line-height:1.6;padding:12px 14px;overflow:auto}.status{background:#0e88d3;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px}
   </style>
 </head>
 <body>
-  <div class="frame" role="img" aria-label="CedarEx 当前实现效果的 VSCode 风格脚本工作台">
-    <header class="titlebar"><div class="traffic"><span class="red"></span><span class="yellow"></span><span class="green"></span></div><div class="command">CedarEx: 搜索脚本、运行命令、调用 AI</div><div class="env">Python · local workspace</div></header>
+  <div class="frame">
+    <header class="titlebar"><div class="traffic"><span class="red"></span><span class="yellow"></span><span class="green"></span></div></header>
     <div class="main">
-      <nav class="activity"><div class="icon active">📁</div><div class="icon">▶</div><div class="icon">⌕</div><div class="icon">┤</div><div class="icon ai">AI</div></nav>
-      <aside class="sidebar"><div class="side-title">脚本资源管理器</div><div class="search">⌕ <span>搜索 scripts...</span></div><div class="side-row"><span>0 个脚本</span><span class="refresh">刷新</span></div></aside>
+      <nav class="activity" aria-label="主入口"><button class="active" title="脚本">📁</button><button title="运行">▶</button><button title="搜索">⌕</button><button title="记录">┤</button><button class="ai" title="助手">助手</button></nav>
+      <aside class="sidebar">
+        <div class="side-title">脚本资源管理器</div>
+        <input class="search" id="search" value="" placeholder="搜索脚本..." />
+        <div class="side-row"><span id="count">3 个脚本</span><span class="refresh">刷新</span></div>
+        <div class="folder">▾ 常用脚本</div>
+        <button class="script active" data-script="image">图像一致性检查<small>检查图片尺寸、命名和数量</small></button>
+        <button class="script" data-script="rename">批量重命名<small>按规则整理文件名</small></button>
+        <button class="script" data-script="report">结果汇总报告<small>把多份结果合成一份报告</small></button>
+      </aside>
       <main class="work">
-        <div class="tabs"><div class="tab active">选择一个脚本开始</div><div class="tab">README Preview</div><div class="tab">Run History</div></div>
+        <div class="tabs"><button class="tab active" data-view="form">填写参数</button><button class="tab" data-view="doc">使用说明</button><button class="tab" data-view="history">运行记录</button></div>
         <section class="content">
-          <div class="editor"><div class="taskbar"><div><b>当前任务</b><p>左侧选择脚本后，会自动生成参数表单。</p></div><span class="empty-pill">空闲</span></div><div class="empty"><div><div class="play">▶</div><h1>选择脚本，填写参数，然后运行</h1><p>底部是真实终端，可直接输入命令，也会承接脚本执行输出。</p></div></div></div>
-          <aside class="assistant"><div class="assist-title">AI Copilot Panel</div><div class="card"><div class="card-head"><span>脚本说明</span><span class="collapse">收起</span></div><div class="box">暂无说明文档。</div></div><div class="card"><div class="card-head"><span>快捷动作</span></div><div class="chips"><span class="chip">解释参数</span><span class="chip">生成命令</span><span class="chip">诊断日志</span><span class="chip">创建模板</span></div></div></aside>
+          <div class="editor">
+            <div class="taskbar"><div><b id="taskName">图像一致性检查</b><p id="taskDesc">选择输入目录后，系统会检查图片是否完整一致。</p></div><span class="pill" id="state">准备就绪</span></div>
+            <div class="view active" id="formView">
+              <div class="form-grid">
+                <div class="field full"><label><span>要检查的文件夹 *</span><span>必填</span></label><div class="path-row"><input class="input" id="inputDir" value="/data/cap/input" /><button class="btn" id="chooseDir">选择</button></div><div class="hint">选择放图片的总文件夹，不需要懂命令。</div></div>
+                <div class="field"><label><span>检查方式</span><span>推荐默认</span></label><select id="mode"><option>严格检查</option><option>只检查文件数量</option><option>只检查图片尺寸</option></select></div>
+                <div class="field"><label><span>同时处理数量</span><span>越大越快</span></label><input class="input" id="threads" value="8" /></div>
+                <div class="field full"><label><span>报告保存位置</span><span>自动生成</span></label><div class="path-row"><input class="input" id="outputPath" value="./输出报告/图像一致性报告.html" /><button class="btn">选择</button></div><div class="hint">运行完成后优先打开这个 HTML 报告。</div></div>
+              </div>
+              <div class="actions"><button class="btn primary" id="runBtn">开始运行</button><button class="btn" id="saveBtn">保存这组参数</button><button class="btn danger" id="stopBtn">停止</button></div>
+            </div>
+            <div class="view doc" id="docView">
+              <h2 id="docTitle">图像一致性检查使用说明</h2>
+              <p id="docIntro">这个脚本用来检查一批图片是否齐全、尺寸是否一致、命名是否符合要求。适合交付前或批量处理前快速确认数据质量。</p>
+              <div class="steps"><div class="step">1. 选择文件夹</div><div class="step">2. 保持默认设置</div><div class="step">3. 点击开始运行</div><div class="step">4. 打开 HTML 报告</div></div>
+              <div class="doc-card"><b>安全说明</b><p id="safeText">只读取图片并生成报告，不会删除、移动或覆盖原始图片。</p></div>
+              <div class="doc-card"><b>运行后看什么</b><p>优先打开 HTML 报告，顶部会直接告诉你“通过”或“发现问题”，下面会列出需要处理的文件。</p></div>
+            </div>
+            <div class="view history" id="historyView">
+              <h2>运行记录</h2>
+              <div class="record"><span>今天 10:21 · 图像一致性检查 · /data/cap/input</span><b class="ok">通过</b></div>
+              <div class="record"><span>今天 09:48 · 批量重命名 · /data/raw</span><b class="bad">已停止</b></div>
+              <div class="record"><span>昨天 18:07 · 结果汇总报告 · /data/reports</span><b class="ok">完成</b></div>
+            </div>
+          </div>
+          <aside class="assistant">
+            <div class="assist-title">智能助手</div>
+            <div class="card"><h3>下一步建议</h3><p id="tip">先确认左侧选中的脚本，再检查必填项是否已经填写。不会写命令也可以直接点击“开始运行”。</p></div>
+            <div class="card"><h3>快捷动作</h3><div class="chips"><button class="chip" data-action="explain">解释当前参数</button><button class="chip" data-action="command">生成运行命令</button><button class="chip" data-action="log">诊断日志</button><button class="chip" data-action="template">创建脚本模板</button></div></div>
+            <div class="card"><h3>运行前检查</h3><p id="checkText">输入文件夹已填写，报告位置已填写，可以运行。</p></div>
+          </aside>
         </section>
-        <section class="terminal"><div class="panel-tabs"><b>TERMINAL</b><span>PROBLEMS</span><span>OUTPUT</span><span>AI REVIEW</span><div class="tools"><span>等待命令执行。</span><span class="tool disabled">让 opencode 分析</span><span class="tool">复制日志</span><span class="tool">清空</span></div></div><div class="term-title"><div><span class="red"></span> <span class="yellow"></span> <span class="green"></span></div><div style="text-align:center">cedarex - idle</div><div class="pty">real pty</div></div><div class="term-body"></div></section>
+        <section class="terminal"><div class="panel-tabs"><b>终端</b><span>问题</span><span>输出</span><span>智能分析</span><div class="tools"><span id="termState">等待命令执行。</span><button class="tool disabled" id="analyzeBtn">让智能助手分析</button><button class="tool" id="copyBtn">复制日志</button><button class="tool" id="clearBtn">清空</button></div></div><div class="term-title"><div><span class="dot red"></span> <span class="dot yellow"></span> <span class="dot green"></span></div><div style="text-align:center" id="termTitle">CedarEx - 空闲中</div><div class="pty">真实终端</div></div><div class="term-body" id="log">提示：选择脚本，填写参数，然后点击“开始运行”。</div></section>
       </main>
     </div>
-    <footer class="status"><span>CedarEx Workspace</span><span>AI: opencode ready · UTF-8</span></footer>
+    <footer class="status"><span>CedarEx 工作区</span><span id="statusText">智能助手已就绪 · UTF-8</span></footer>
   </div>
+  <script>
+    const scripts={image:{name:'图像一致性检查',desc:'选择输入目录后，系统会检查图片是否完整一致。',doc:'图像一致性检查使用说明',intro:'这个脚本用来检查一批图片是否齐全、尺寸是否一致、命名是否符合要求。适合交付前或批量处理前快速确认数据质量。',safe:'只读取图片并生成报告，不会删除、移动或覆盖原始图片。'},rename:{name:'批量重命名',desc:'按统一规则整理文件名，运行前会先预览变更。',doc:'批量重命名使用说明',intro:'这个脚本适合把杂乱文件名统一整理成规范格式，方便后续检索、上传或交付。',safe:'默认先生成预览清单，确认后才会改名；不会删除文件。'},report:{name:'结果汇总报告',desc:'把多个检查结果合并成一份便于查看的总报告。',doc:'结果汇总报告使用说明',intro:'这个脚本适合把多个批次、多个目录的检查结果汇总成一份 HTML 报告，便于统一查看。',safe:'只读取已有结果并生成新报告，不会修改原始结果文件。'}};
+    let current='image';
+    const $=s=>document.querySelector(s);const $$=s=>document.querySelectorAll(s);
+    function setScript(key){current=key;const data=scripts[key];$('#taskName').textContent=data.name;$('#taskDesc').textContent=data.desc;$('#docTitle').textContent=data.doc;$('#docIntro').textContent=data.intro;$('#safeText').textContent=data.safe;$('#tip').textContent='当前选择：'+data.name+'。先看“填写参数”，不确定用途时切到“使用说明”。';$('#state').textContent='准备就绪';$('#statusText').textContent='已选择：'+data.name+' · UTF-8';$$('.script').forEach(b=>b.classList.toggle('active',b.dataset.script===key));}
+    $$('.script').forEach(b=>b.addEventListener('click',()=>setScript(b.dataset.script)));
+    $$('.tab').forEach(b=>b.addEventListener('click',()=>{$$('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');$$('.view').forEach(v=>v.classList.remove('active'));$('#'+b.dataset.view+'View').classList.add('active')}));
+    $('#runBtn').addEventListener('click',()=>{const name=scripts[current].name;$('#state').textContent='运行中';$('#termState').textContent='正在运行脚本。';$('#termTitle').textContent='CedarEx - 运行中';$('#analyzeBtn').classList.remove('disabled');$('#log').innerHTML='正在运行：'+name+'<br>输入文件夹：'+$('#inputDir').value+'<br>检查方式：'+$('#mode').value+'<br><span style="color:var(--green)">[完成]</span> 报告已生成：'+$('#outputPath').value;setTimeout(()=>{$('#state').textContent='已完成';$('#termState').textContent='命令执行完成。';$('#termTitle').textContent='CedarEx - 已完成';},600)});
+    $('#clearBtn').addEventListener('click',()=>{$('#log').textContent='日志已清空。';$('#termState').textContent='等待命令执行。'});
+    $('#copyBtn').addEventListener('click',()=>{$('#termState').textContent='日志已复制。'});
+    $('#chooseDir').addEventListener('click',()=>{$('#inputDir').value='/data/示例图片目录';$('#checkText').textContent='已选择示例文件夹，可以运行。'});
+    $$('.chip').forEach(b=>b.addEventListener('click',()=>{$('#tip').textContent='已触发：'+b.textContent+'。这里会根据当前脚本、参数和终端日志给出中文建议。'}));
+  </script>
 </body>
 </html>
