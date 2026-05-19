@@ -117,7 +117,6 @@ function switchEditorTab(tab) {
   els.empty.classList.toggle('hidden', tab !== 'form' || Boolean(state.selectedPath));
   els.task.classList.toggle('hidden', tab !== 'form' || !state.selectedPath);
   els.readmePanel.classList.toggle('hidden', tab !== 'readme');
-  if (tab === 'history') switchActivityView('history');
 }
 
 function sideCard(title, headline, text, actionText, onClick) {
