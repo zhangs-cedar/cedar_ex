@@ -30,6 +30,7 @@ const els = {
   log: $('terminal'),
   logHint: $('logHint'),
   clearLog: $('clearLogBtn'),
+  newTerminal: $('newTerminalBtn'),
   copyLog: $('copyLogBtn'),
   analyze: $('analyzeBtn'),
   aiReviewPanel: $('aiReviewPanel'),
@@ -55,6 +56,7 @@ els.run.addEventListener('click', runSelectedScript);
 els.stop.addEventListener('click', stopCurrentScript);
 els.reset.addEventListener('click', resetForm);
 els.clearLog.addEventListener('click', () => setLog(''));
+els.newTerminal.addEventListener('click', restartTerminal);
 els.copyLog.addEventListener('click', copyLog);
 els.analyze.addEventListener('click', analyzeCurrentRun);
 els.toggleDoc.addEventListener('click', toggleDoc);
@@ -83,7 +85,7 @@ async function init() {
   els.count.textContent = `${state.flatScripts.length} 个可运行脚本`;
   renderTree();
   setRunState('idle', '空闲');
-  setTerminalTitle('idle');
+  setTerminalTitle('空闲');
 }
 
 async function switchActivityView(view) {
@@ -98,12 +100,12 @@ async function switchActivityView(view) {
     return;
   }
   if (view === 'run') renderSidePanel([
-    sideCard('当前脚本', state.selectedNode ? state.selectedNode.name : '尚未选择脚本', state.selectedPath ? '可运行、可停止，并可在底部终端继续交互。' : '请先在 Explorer 中选择一个脚本。', '运行选中脚本', () => els.run.click()),
+    sideCard('当前脚本', state.selectedNode ? state.selectedNode.name : '尚未选择脚本', state.selectedPath ? '可运行、可停止，并可在底部终端继续交互。' : '请先在资源管理器中选择一个脚本。', '运行选中脚本', () => els.run.click()),
     sideCard('终端', '真实 PTY 已集成', '底部 Terminal 支持 zsh/bash/powershell 交互输入。', '聚焦终端', () => term?.focus()),
   ]);
   if (view === 'ai') renderSidePanel([
     sideCard('AI 上下文', '脚本 + 参数 + README + 终端日志', '右侧快捷动作会自动打包上下文给 opencode。', '诊断日志', () => runAiQuickAction('diagnose_log', document.querySelector('[data-ai-action="diagnose_log"]'))),
-    sideCard('建议', '先运行脚本，再调用 AI Review', '这样 AI 能看到真实输出、错误栈和退出信息。', '打开 AI Review', () => els.aiReviewPanel.classList.remove('hidden')),
+    sideCard('建议', '先运行脚本，再调用 AI 分析', '这样 AI 能看到真实输出、错误栈和退出信息。', '打开 AI 分析', () => els.aiReviewPanel.classList.remove('hidden')),
   ]);
   if (view === 'history') await renderHistoryPanel();
 }
@@ -165,7 +167,7 @@ async function openRunDetail(logPath) {
   }
   const item = res.data;
   const clipped = item.clipped ? '\n\n> 日志较长，当前仅展示最后一部分。' : '';
-  els.aiReview.innerHTML = renderMarkdown(`### Run Detail: ${item.path}\n\n- 修改时间：${item.modified}\n- 文件大小：${Math.round(item.size / 1024)} KB${clipped}\n\n\`\`\`text\n${item.content || '日志为空'}\n\`\`\``);
+  els.aiReview.innerHTML = renderMarkdown(`### 运行详情：${item.path}\n\n- 修改时间：${item.modified}\n- 文件大小：${Math.round(item.size / 1024)} KB${clipped}\n\n\`\`\`text\n${item.content || '日志为空'}\n\`\`\``);
   terminalTranscript = item.content || terminalTranscript;
   els.analyze.disabled = false;
 }
@@ -224,7 +226,7 @@ async function selectScript(node) {
   renderTree();
   setLog('');
   setRunState('idle', '空闲');
-  setTerminalTitle(`selected — ${node.name}`);
+  setTerminalTitle(`已选择 — ${node.name}`);
   els.title.textContent = node.name;
   els.path.textContent = node.path;
   els.empty.classList.add('hidden');
@@ -395,13 +397,13 @@ async function runSelectedScript(event) {
   if (!state.selectedPath || state.running || !validateForm()) return;
   setRunning(true);
   setRunState('running', '运行中');
-  setTerminalTitle(`running — ${state.selectedPath}`);
+  setTerminalTitle(`运行中 — ${state.selectedPath}`);
   setLog(`$ python ${state.selectedPath}/main.py\n正在启动脚本...\n`);
   const res = await window.pywebview.api.run_script(state.selectedPath, collectConfig());
   if (!res.ok) {
     setRunning(false);
     setRunState('error', '启动失败');
-    setTerminalTitle('start failed');
+    setTerminalTitle('启动失败');
     showToast(res.error || '启动失败');
     return;
   }
@@ -515,7 +517,7 @@ async function initTerminal() {
     term.write(`真实终端启动失败: ${started.error}\r\n`);
     return;
   }
-  setTerminalTitle(`pty — ${started.data.platform}`);
+  setTerminalTitle(`真实终端 — ${started.data.platform}`);
   els.analyze.disabled = false;
   term.onData((data) => window.pywebview.api.terminal_write(data));
   terminalPoller = setInterval(async () => {
@@ -527,6 +529,19 @@ async function initTerminal() {
   }, 50);
   window.addEventListener('resize', resizeTerminal);
   setTimeout(resizeTerminal, 100);
+}
+
+async function restartTerminal() {
+  try {
+    await window.pywebview.api.terminal_stop();
+    term?.dispose?.();
+    term = null;
+    terminalTranscript = '';
+    await initTerminal();
+    showToast('已新建终端');
+  } catch (error) {
+    showToast(`新建终端失败：${error.message || error}`);
+  }
 }
 
 async function resizeTerminal() {

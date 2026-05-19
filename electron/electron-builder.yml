@@ -1,0 +1,35 @@
+appId: com.cedarex.app
+productName: CedarEx
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**/*
+  - "!node_modules/**/*"
+extraResources:
+  - from: ../sidecar.py
+    to: sidecar.py
+  - from: ../scripts
+    to: scripts
+  - from: ../tools
+    to: tools
+mac:
+  target:
+    - dmg
+    - zip
+  artifactName: "${productName}-${version}-mac.${ext}"
+  category: public.app-category.developer-tools
+win:
+  target:
+    - nsis
+    - portable
+  artifactName: "${productName}-${version}-win.${ext}"
+linux:
+  target:
+    - AppImage
+    - deb
+  artifactName: "${productName}-${version}-linux.${ext}"
+  category: Development
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

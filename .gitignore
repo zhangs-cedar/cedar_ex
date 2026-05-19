@@ -153,3 +153,8 @@ resources/MSYH.TTC
 python.exe.lnk
 /test
 .DS_Store
+
+# Electron frontend
+electron/out/
+electron/node_modules/
+electron/dist/
