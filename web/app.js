@@ -36,6 +36,9 @@ const els = {
 };
 
 window.addEventListener('pywebviewready', init);
+if (window.mermaid) {
+  window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+}
 els.search.addEventListener('input', () => renderTree());
 els.refresh.addEventListener('click', init);
 els.run.addEventListener('click', runSelectedScript);
@@ -131,9 +134,10 @@ async function selectScript(node) {
 }
 
 function renderDoc(doc) {
-  els.doc.textContent = doc || '暂无说明文档。';
+  els.doc.innerHTML = doc ? renderMarkdown(doc) : '<p>暂无说明文档。</p>';
   els.doc.classList.toggle('hidden', state.docCollapsed);
   els.toggleDoc.textContent = state.docCollapsed ? '展开' : '收起';
+  renderMermaidDiagrams();
 }
 
 function toggleDoc() {
@@ -157,8 +161,10 @@ function renderForm(fields) {
     const wrap = document.createElement('div');
     wrap.className = `field ${['multiline', 'file', 'dir'].includes(type) ? 'full' : ''} ${type === 'bool' ? 'checkbox-field' : ''}`;
     const input = createInput(field, type);
-    input.dataset.name = field.name;
-    input.dataset.type = type;
+    if (!input.classList || !input.classList.contains('picker-row')) {
+      input.dataset.name = field.name;
+      input.dataset.type = type;
+    }
 
     const label = document.createElement('label');
     label.innerHTML = `${escapeHtml(field.label || field.name)}${field.required ? '<span class="required">*</span>' : ''}`;
@@ -196,6 +202,9 @@ function createInput(field, type) {
     el.value = field.default ?? '';
     return el;
   }
+  if (type === 'file' || type === 'dir') {
+    return createPathPicker(field, type);
+  }
   const el = document.createElement('input');
   el.type = type === 'int' || type === 'float' ? 'number' : type === 'bool' ? 'checkbox' : type === 'date' ? 'date' : 'text';
   if (field.min !== undefined) el.min = field.min;
@@ -204,6 +213,33 @@ function createInput(field, type) {
   if (type === 'bool') el.checked = Boolean(field.default);
   else el.value = field.default ?? '';
   return el;
+}
+
+function createPathPicker(field, type) {
+  const row = document.createElement('div');
+  row.className = 'picker-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = field.default ?? '';
+  input.placeholder = type === 'dir' ? '请选择或输入本地目录路径' : '请选择或输入本地文件路径';
+  input.dataset.name = field.name;
+  input.dataset.type = type;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ghost';
+  btn.textContent = type === 'dir' ? '选择目录' : '选择文件';
+  btn.addEventListener('click', async () => {
+    const res = type === 'dir'
+      ? await window.pywebview.api.choose_directory()
+      : await window.pywebview.api.choose_file();
+    if (res.ok && res.data) input.value = res.data;
+    else if (!res.ok) showToast(res.error || '选择失败');
+  });
+
+  row.appendChild(input);
+  row.appendChild(btn);
+  return row;
 }
 
 function helpText(text) {
@@ -326,6 +362,131 @@ function showToast(message) {
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+}
+
+function renderMarkdown(markdown) {
+  const lines = String(markdown).replace(/\r\n/g, '\n').split('\n');
+  const html = [];
+  let inCode = false;
+  let codeLang = '';
+  let codeLines = [];
+  let listType = null;
+  let paragraph = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      html.push(`<p>${renderInline(paragraph.join(' '))}</p>`);
+      paragraph = [];
+    }
+  };
+  const closeList = () => {
+    if (listType) {
+      html.push(`</${listType}>`);
+      listType = null;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    if (line.startsWith('```')) {
+      if (inCode) {
+        const codeText = codeLines.join('\n');
+        if (codeLang === 'mermaid') {
+          html.push(`<div class="mermaid">${escapeHtml(codeText)}</div>`);
+        } else {
+          html.push(`<pre><code>${escapeHtml(codeText)}</code></pre>`);
+        }
+        inCode = false;
+        codeLang = '';
+        codeLines = [];
+      } else {
+        flushParagraph();
+        closeList();
+        inCode = true;
+        codeLang = line.replace(/^```/, '').trim().toLowerCase();
+      }
+      continue;
+    }
+    if (inCode) {
+      codeLines.push(rawLine);
+      continue;
+    }
+
+    if (!line.trim()) {
+      flushParagraph();
+      closeList();
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      closeList();
+      const level = heading[1].length;
+      html.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const quote = line.match(/^>\s?(.+)$/);
+    if (quote) {
+      flushParagraph();
+      closeList();
+      html.push(`<blockquote>${renderInline(quote[1])}</blockquote>`);
+      continue;
+    }
+
+    const unordered = line.match(/^[-*]\s+(.+)$/);
+    const ordered = line.match(/^\d+\.\s+(.+)$/);
+    if (unordered || ordered) {
+      flushParagraph();
+      const tag = unordered ? 'ul' : 'ol';
+      if (listType !== tag) {
+        closeList();
+        html.push(`<${tag}>`);
+        listType = tag;
+      }
+      html.push(`<li>${renderInline((unordered || ordered)[1])}</li>`);
+      continue;
+    }
+
+    if (/^\|.+\|$/.test(line)) {
+      flushParagraph();
+      closeList();
+      html.push(renderTableLine(line));
+      continue;
+    }
+
+    paragraph.push(line.trim());
+  }
+  flushParagraph();
+  closeList();
+  if (inCode) {
+    const codeText = codeLines.join('\n');
+    html.push(codeLang === 'mermaid' ? `<div class="mermaid">${escapeHtml(codeText)}</div>` : `<pre><code>${escapeHtml(codeText)}</code></pre>`);
+  }
+  return html.join('\n').replace(/<\/table>\n<table>/g, '');
+}
+
+async function renderMermaidDiagrams() {
+  if (!window.mermaid) return;
+  try {
+    await window.mermaid.run({ nodes: els.doc.querySelectorAll('.mermaid') });
+  } catch (error) {
+    showToast(`流程图渲染失败：${error.message || error}`);
+  }
+}
+
+function renderInline(text) {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
+}
+
+function renderTableLine(line) {
+  if (/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line)) return '';
+  const cells = line.split('|').slice(1, -1).map((cell) => `<td>${renderInline(cell.trim())}</td>`).join('');
+  return `<table><tr>${cells}</tr></table>`;
 }
 
 function cssEscape(value) {

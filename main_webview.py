@@ -61,6 +61,10 @@ class Api:
         LOG_DIR.mkdir(exist_ok=True)
         self.runs = {}
         self.current_run = None
+        self.window = None
+
+    def set_window(self, window):
+        self.window = window
 
     def get_scripts(self):
         """返回脚本树。只有包含 main.py/.pyd/.so 的节点可运行。"""
@@ -170,6 +174,22 @@ class Api:
         self.current_run.process.terminate()
         return {'ok': True, 'data': '已发送停止信号'}
 
+    def choose_directory(self):
+        if not self.window:
+            return {'ok': False, 'error': '窗口尚未初始化'}
+        import webview
+
+        result = self.window.create_file_dialog(webview.FOLDER_DIALOG)
+        return {'ok': True, 'data': result[0] if result else ''}
+
+    def choose_file(self):
+        if not self.window:
+            return {'ok': False, 'error': '窗口尚未初始化'}
+        import webview
+
+        result = self.window.create_file_dialog(webview.OPEN_DIALOG)
+        return {'ok': True, 'data': result[0] if result else ''}
+
     def _pipe_output(self, run):
         try:
             with run.log_path.open('a', encoding='utf-8') as log_file:
@@ -219,4 +239,5 @@ if __name__ == '__main__':
     api = Api()
     index_path = WEB_DIR / 'index.html'
     window = webview.create_window('CedarEx 脚本执行器', str(index_path), js_api=api, width=1400, height=1000)
+    api.set_window(window)
     webview.start(debug=False)
