@@ -64,6 +64,11 @@ function App() {
     if (!selectedPath || running) return
     setRunning(true)
     try {
+      const terminal = await window.cedar.terminalStart()
+      if (!terminal.ok) {
+        showToast(terminal.error || '终端启动失败')
+        return
+      }
       const res = await window.cedar.runScript(selectedPath, config)
       if (!res.ok) {
         showToast(res.error || '启动失败')

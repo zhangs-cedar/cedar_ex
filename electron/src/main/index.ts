@@ -62,7 +62,14 @@ app.on('window-all-closed', () => {
 })
 
 function registerIpcHandlers(): void {
-  const api = (method: string, ...args: unknown[]) => sidecar?.call(method, ...args)
+  const api = async (method: string, ...args: unknown[]) => {
+    if (!sidecar) return { ok: false, error: 'Sidecar 未启动' }
+    try {
+      return await sidecar.call(method, ...args)
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  }
 
   ipcMain.handle('sidecar:getScripts', () => api('get_scripts'))
   ipcMain.handle('sidecar:getScriptDetail', (_e, path: string) => api('get_script_detail', path))

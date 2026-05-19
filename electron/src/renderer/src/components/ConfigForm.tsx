@@ -50,10 +50,10 @@ export function ConfigForm({ fields, onRun, onStop, onReset, running, selectedPa
             <p className='muted'>该脚本没有参数配置，点击「运行脚本」即可执行。</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className='btn-primary' onClick={() => onRun(config)} disabled={running}>
+            <button type='button' className='btn-primary' onClick={() => onRun(config)} disabled={running}>
               ▶ 运行脚本
             </button>
-            <button className='btn-danger' onClick={onStop}>停止 / Ctrl+C</button>
+            <button type='button' className='btn-danger' onClick={onStop}>停止 / Ctrl+C</button>
           </div>
         </div>
       </div>
@@ -68,11 +68,11 @@ export function ConfigForm({ fields, onRun, onStop, onReset, running, selectedPa
           <p className='muted'>由 form.yaml 生成，可保存为运行预设。</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className='btn-ghost' onClick={handleReset}>重置</button>
-          <button className='btn-primary' onClick={handleRun} disabled={running}>
+          <button type='button' className='btn-ghost' onClick={handleReset}>重置</button>
+          <button type='button' className='btn-primary' onClick={handleRun} disabled={running}>
             ▶ 运行脚本
           </button>
-          <button className='btn-danger' onClick={onStop}>停止 / Ctrl+C</button>
+          <button type='button' className='btn-danger' onClick={onStop}>停止 / Ctrl+C</button>
         </div>
       </div>
       <form ref={formRef} className='form-grid' onSubmit={handleRun}>
