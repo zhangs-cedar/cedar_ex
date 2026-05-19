@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CedarEx</title>
+    <link rel="stylesheet" href="vendor/xterm.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -77,6 +78,7 @@
               <p id="logHint" class="muted">等待命令执行。</p>
             </div>
             <div class="actions">
+              <button id="analyzeBtn" class="ghost" disabled>让 opencode 分析</button>
               <button id="copyLogBtn" class="ghost">复制日志</button>
               <button id="clearLogBtn" class="ghost">清空</button>
             </div>
@@ -91,14 +93,25 @@
               <div id="terminalTitle" class="terminal-title">cedarex — idle</div>
               <div class="terminal-badge">local</div>
             </div>
-            <pre id="log" class="log terminal-output"></pre>
+            <div id="terminal" class="xterm-host"></div>
           </div>
+        </section>
+
+        <section id="aiReviewPanel" class="card ai-review-card hidden">
+          <div class="card-header compact">
+            <div>
+              <h3>AI Review</h3>
+              <p class="muted">opencode 会基于退出码、参数和日志判断本次运行情况。</p>
+            </div>
+          </div>
+          <div id="aiReview" class="doc markdown-body">暂无分析结果。</div>
         </section>
       </main>
     </div>
 
     <div id="toast" class="toast hidden"></div>
     <script src="vendor/mermaid.min.js"></script>
+    <script src="vendor/xterm.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

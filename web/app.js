@@ -27,14 +27,20 @@ const els = {
   run: $('runBtn'),
   stop: $('stopBtn'),
   reset: $('resetBtn'),
-  log: $('log'),
+  log: $('terminal'),
   logHint: $('logHint'),
   clearLog: $('clearLogBtn'),
   copyLog: $('copyLogBtn'),
+  analyze: $('analyzeBtn'),
+  aiReviewPanel: $('aiReviewPanel'),
+  aiReview: $('aiReview'),
   toggleDoc: $('toggleDocBtn'),
   terminalTitle: $('terminalTitle'),
   toast: $('toast'),
 };
+let term = null;
+let terminalPoller = null;
+let terminalTranscript = '';
 
 window.addEventListener('pywebviewready', init);
 if (window.mermaid) {
@@ -47,10 +53,12 @@ els.stop.addEventListener('click', stopCurrentScript);
 els.reset.addEventListener('click', resetForm);
 els.clearLog.addEventListener('click', () => setLog(''));
 els.copyLog.addEventListener('click', copyLog);
+els.analyze.addEventListener('click', analyzeCurrentRun);
 els.toggleDoc.addEventListener('click', toggleDoc);
 
 async function init() {
   setRunState('loading', '加载中');
+  await initTerminal();
   const res = await window.pywebview.api.get_scripts();
   if (!res.ok) {
     showToast(res.error || '脚本加载失败');
@@ -299,6 +307,8 @@ async function runSelectedScript(event) {
     return;
   }
   state.runId = res.data.run_id;
+  els.analyze.disabled = true;
+  els.aiReviewPanel.classList.add('hidden');
   state.polling = setInterval(pollStatus, 500);
 }
 
@@ -314,8 +324,27 @@ async function pollStatus() {
     const ok = res.data.exit_code === 0;
     setRunState(ok ? 'success' : 'error', ok ? '执行成功' : `失败：${res.data.exit_code}`);
     setTerminalTitle(ok ? `completed — exit 0` : `failed — exit ${res.data.exit_code}`);
+    els.analyze.disabled = false;
     showToast(ok ? '脚本执行完成' : '脚本执行失败，请查看日志');
   }
+}
+
+async function analyzeCurrentRun() {
+  if (!state.runId) return showToast('暂无可分析的运行记录');
+  els.analyze.disabled = true;
+  els.aiReviewPanel.classList.remove('hidden');
+  els.aiReview.innerHTML = '<p>opencode 正在分析本次运行，请稍候...</p>';
+  const res = await window.pywebview.api.analyze_run_with_opencode(state.runId);
+  if (res.ok) {
+    els.aiReview.innerHTML = renderMarkdown(res.data.review || 'opencode 未返回分析内容。');
+    renderMermaidDiagrams();
+    showToast('opencode 分析完成');
+  } else {
+    const review = res.data?.review ? `\n\n${res.data.review}` : '';
+    els.aiReview.innerHTML = renderMarkdown(`分析失败：${res.error}${review}`);
+    showToast(res.error || 'opencode 分析失败');
+  }
+  els.analyze.disabled = false;
 }
 
 async function stopCurrentScript() {
@@ -343,9 +372,59 @@ function setRunState(kind, text) {
 }
 
 function setLog(text) {
-  els.log.textContent = text;
-  els.log.scrollTop = els.log.scrollHeight;
+  terminalTranscript = text || '';
+  if (term) {
+    term.clear();
+    if (terminalTranscript) term.write(terminalTranscript.replace(/\n/g, '\r\n'));
+  }
   els.logHint.textContent = text ? '日志实时更新中，输出会自动滚动到底部。' : '等待命令执行。';
+}
+
+function appendTerminal(text) {
+  terminalTranscript += text;
+  if (term) term.write(text.replace(/\n/g, '\r\n'));
+  els.logHint.textContent = '终端输出已更新。';
+}
+
+async function initTerminal() {
+  if (!window.Terminal || term) return;
+  term = new window.Terminal({
+    cursorBlink: true,
+    convertEol: true,
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontSize: 13,
+    theme: { background: '#050816', foreground: '#d1d5db', cursor: '#22c55e', selectionBackground: '#2563eb66' },
+  });
+  term.open(els.log);
+  const cols = term.cols || 100;
+  const rows = term.rows || 30;
+  const started = await window.pywebview.api.terminal_start(cols, rows);
+  if (!started.ok) {
+    term.write(`真实终端启动失败: ${started.error}\r\n`);
+    return;
+  }
+  setTerminalTitle(`pty — ${started.data.platform}`);
+  term.onData((data) => window.pywebview.api.terminal_write(data));
+  terminalPoller = setInterval(async () => {
+    const res = await window.pywebview.api.terminal_read();
+    if (res.ok && res.data) {
+      terminalTranscript += res.data;
+      term.write(res.data);
+    }
+  }, 50);
+  window.addEventListener('resize', resizeTerminal);
+  setTimeout(resizeTerminal, 100);
+}
+
+async function resizeTerminal() {
+  if (!term) return;
+  const charWidth = 8;
+  const charHeight = 17;
+  const rect = els.log.getBoundingClientRect();
+  const cols = Math.max(40, Math.floor((rect.width - 20) / charWidth));
+  const rows = Math.max(10, Math.floor((rect.height - 20) / charHeight));
+  term.resize(cols, rows);
+  await window.pywebview.api.terminal_resize(cols, rows);
 }
 
 function setTerminalTitle(text) {
@@ -353,7 +432,7 @@ function setTerminalTitle(text) {
 }
 
 async function copyLog() {
-  const text = els.log.textContent;
+  const text = terminalTranscript;
   if (!text) return showToast('暂无日志可复制');
   try {
     await navigator.clipboard.writeText(text);
