@@ -197,11 +197,11 @@ function renderNodes(nodes, parent, keyword) {
     if (!visible) return;
 
     const btn = document.createElement('button');
-    btn.className = `script-item ${node.runnable ? 'tool-item' : 'folder-item disabled'} ${state.selectedPath === node.path ? 'active' : ''}`;
+    btn.className = `script-item ${node.runnable ? 'tool-item' : 'folder-item'} ${state.selectedPath === node.path ? 'active' : ''}`;
     btn.title = node.path || node.name;
     btn.innerHTML = node.runnable
-      ? `<span class="script-name">${escapeHtml(node.name)}</span><small>${escapeHtml(node.path || '可运行工具')}</small>`
-      : `<span class="script-name">▾ ${escapeHtml(node.name)}</span>`;
+      ? `<span class="script-icon"></span><span class="script-name">${escapeHtml(node.name)}</span>`
+      : `<span class="script-icon">▾</span><span class="script-name">${escapeHtml(node.name)}</span>`;
     if (node.runnable) btn.addEventListener('click', () => selectScript(node));
     parent.appendChild(btn);
     if (childVisible > 0) parent.appendChild(childrenBox);
@@ -221,8 +221,8 @@ async function selectScript(node) {
   setLog('');
   setRunState('idle', '空闲');
   setTerminalTitle(`已选择 ${node.name}`);
-  els.title.textContent = node.name;
-  els.path.textContent = node.path;
+  if (els.title) els.title.textContent = node.name;
+  if (els.path) els.path.textContent = node.path;
   if (els.precheck) els.precheck.textContent = '请确认必填信息已填写，然后点击底部“运行”。';
   els.empty.classList.add('hidden');
   els.task.classList.remove('hidden');
@@ -473,6 +473,7 @@ function setRunning(running) {
 }
 
 function setRunState(kind, text) {
+  if (!els.state) return;
   els.state.className = `run-state ${kind === 'running' ? 'running' : kind === 'success' ? 'success' : kind === 'error' ? 'error' : ''}`;
   els.state.textContent = text;
 }

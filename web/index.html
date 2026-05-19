@@ -15,7 +15,7 @@
 
       <div class="main-layout">
         <aside class="sidebar">
-          <div id="sideTitle" class="side-title">工具列表</div>
+          <div id="sideTitle" class="side-title">资源管理器</div>
           <label class="search-box" aria-label="搜索工具">
             <span>⌕</span>
             <input id="scriptSearch" placeholder="搜索工具..." autocomplete="off" />
@@ -24,7 +24,6 @@
             <span id="scriptCount">0 个工具</span>
             <button id="refreshBtn" class="text-button">刷新</button>
           </div>
-          <div class="folder-title">▾ 常用工具</div>
           <nav id="scriptTree" class="script-tree" aria-label="工具列表"></nav>
           <div id="sidePanel" class="side-panel hidden"></div>
         </aside>
@@ -37,15 +36,6 @@
 
           <section class="editor-area">
             <section class="editor-pane">
-              <header class="topbar">
-                <div>
-                  <div class="eyebrow">当前任务</div>
-                  <b id="taskName" class="task-name">选择一个工具开始</b>
-                  <p id="scriptPath" class="muted">左侧选择工具后，会自动生成需要填写的信息。</p>
-                </div>
-                <div class="run-state" id="runState">空闲</div>
-              </header>
-
               <section id="emptyState" class="empty-state">
                 <div class="empty-icon">▶</div>
                 <h3>选择工具，填写信息，然后开始</h3>
