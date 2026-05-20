@@ -16,8 +16,8 @@
   <div class="frame">
     <header class="titlebar"><div class="traffic"><span class="red-dot"></span><span class="yellow-dot"></span><span class="green-dot"></span></div></header>
     <div class="main">
-      <aside class="sidebar"><div class="side-title">资源管理器</div><input id="search" class="search" placeholder="搜索工具..." /><div class="side-row"><span id="toolCount">18 个工具</span><span class="refresh">刷新</span></div><div class="tool-scroll"><button class="tree-row group"><span class="twisty">▾</span><span class="name">常用工具</span></button><button class="tree-row tool active indent-1" data-tool="image"><span class="twisty"></span><span class="name">图像一致性检查</span></button><button class="tree-row tool indent-1" data-tool="rename"><span class="twisty"></span><span class="name">批量重命名</span></button><button class="tree-row tool indent-1" data-tool="report"><span class="twisty"></span><span class="name">结果汇总报告</span></button><button class="tree-row group"><span class="twisty">▾</span><span class="name">数据检查</span></button><button class="tree-row tool indent-1" data-tool="data"><span class="twisty"></span><span class="name">数据完整性检查</span></button><button class="tree-row tool indent-1" data-tool="size"><span class="twisty"></span><span class="name">图片尺寸统计</span></button><button class="tree-row tool indent-1" data-tool="deliver"><span class="twisty"></span><span class="name">交付目录检查</span></button><button class="tree-row group collapsible" data-target="fileGroup"><span class="twisty">▸</span><span class="name">文件整理</span></button><div id="fileGroup" hidden><button class="tree-row tool indent-1" data-tool="zip"><span class="twisty"></span><span class="name">压缩包批量解压</span></button></div><button class="tree-row group collapsible" data-target="reportGroup"><span class="twisty">▸</span><span class="name">报告工具</span></button><div id="reportGroup" hidden><button class="tree-row tool indent-1" data-tool="html"><span class="twisty"></span><span class="name">报告格式转换</span></button></div></div></aside>
-      <main class="work"><div class="tabs"><button class="tab active" data-view="form">填写信息</button><button class="tab" data-view="doc">使用说明</button></div><section class="content"><div class="editor"><div id="formView" class="view active"><div class="form-grid"><div class="field full"><label><span>请选择要处理的文件夹 *</span><span>必填</span></label><div class="path-row"><input id="folderInput" class="input placeholder" value="请选择文件夹" /><button id="chooseBtn" class="btn">选择文件夹</button></div><div class="hint">只需要选择文件夹，不需要输入命令。</div></div><div class="field"><label><span>处理方式</span><span>推荐默认</span></label><select id="mode"><option>完整检查</option><option>只检查数量</option><option>只检查尺寸</option></select></div><div class="field"><label><span>处理速度</span><span>推荐自动</span></label><select><option>自动</option><option>较慢但更稳</option></select></div><div class="field full"><label><span>报告保存位置</span><span>自动生成</span></label><input class="input" value="自动保存到：输出报告文件夹" /></div></div></div><div id="docView" class="view doc"><h2 id="docTitle">README.md 使用说明</h2><p id="docText">这里展示当前工具目录下真实 README.md 的解析结果。切换左侧工具后，这里的内容会随工具变化。</p><div class="doc-card"><b>真实来源</b><p>系统读取当前工具目录中的 README.md，并把内容渲染到这里。</p></div></div></div><aside class="assistant"><div class="assist-title">智能助手</div><div class="card"><h3>现在可以做什么</h3><p id="tip">先选择要处理的文件夹。如果不确定工具用途，可以打开“使用说明”。</p></div><div class="card"><h3>一键帮我</h3><div class="chips"><button class="chip">解释当前设置</button><button class="chip">推荐处理方式</button><button class="chip">查看问题原因</button></div></div><div class="card"><h3>运行前确认</h3><p id="checkText">还没有选择文件夹，请先点击“选择文件夹”。</p></div></aside></section><section class="log-panel"><div class="log-tabs"><b>执行过程</b><div class="log-tools"><span id="logState">等待开始。</span><button id="runBtn" class="log-tool primary">运行</button><button id="stopBtn" class="log-tool danger">停止</button></div></div><div id="log" class="log-body">提示：选择工具，填写信息，然后点击底部“运行”。</div></section></main>
+      <aside id="sidebar" class="sidebar"><div class="side-title">资源管理器</div><input id="search" class="search" placeholder="搜索工具..." /><div class="side-row"><span id="toolCount">18 个工具</span><span class="refresh">刷新</span></div><div class="tool-scroll"><button class="tree-row group"><span class="twisty">▾</span><span class="name">常用工具</span></button><button class="tree-row tool active indent-1" data-tool="image"><span class="twisty"></span><span class="name">图像一致性检查</span></button><button class="tree-row tool indent-1" data-tool="rename"><span class="twisty"></span><span class="name">批量重命名</span></button><button class="tree-row tool indent-1" data-tool="report"><span class="twisty"></span><span class="name">结果汇总报告</span></button><button class="tree-row group"><span class="twisty">▾</span><span class="name">数据检查</span></button><button class="tree-row tool indent-1" data-tool="data"><span class="twisty"></span><span class="name">数据完整性检查</span></button><button class="tree-row tool indent-1" data-tool="size"><span class="twisty"></span><span class="name">图片尺寸统计</span></button><button class="tree-row tool indent-1" data-tool="deliver"><span class="twisty"></span><span class="name">交付目录检查</span></button><button class="tree-row group collapsible" data-target="fileGroup"><span class="twisty">▸</span><span class="name">文件整理</span></button><div id="fileGroup" hidden><button class="tree-row tool indent-1" data-tool="zip"><span class="twisty"></span><span class="name">压缩包批量解压</span></button></div><button class="tree-row group collapsible" data-target="reportGroup"><span class="twisty">▸</span><span class="name">报告工具</span></button><div id="reportGroup" hidden><button class="tree-row tool indent-1" data-tool="html"><span class="twisty"></span><span class="name">报告格式转换</span></button></div></div></aside><div class="splitter vertical" data-resize="sidebar" title="拖拽调整左侧宽度"></div>
+      <main id="work" class="work"><div class="tabs"><button class="tab active" data-view="form">填写信息</button><button class="tab" data-view="doc">使用说明</button></div><section class="content"><div class="editor"><div id="formView" class="view active"><div class="form-grid"><div class="field full"><label><span>请选择要处理的文件夹 *</span><span>必填</span></label><div class="path-row"><input id="folderInput" class="input placeholder" value="请选择文件夹" /><button id="chooseBtn" class="btn">选择文件夹</button></div><div class="hint">只需要选择文件夹，不需要输入命令。</div></div><div class="field"><label><span>处理方式</span><span>推荐默认</span></label><select id="mode"><option>完整检查</option><option>只检查数量</option><option>只检查尺寸</option></select></div><div class="field"><label><span>处理速度</span><span>推荐自动</span></label><select><option>自动</option><option>较慢但更稳</option></select></div><div class="field full"><label><span>报告保存位置</span><span>自动生成</span></label><input class="input" value="自动保存到：输出报告文件夹" /></div></div></div><div id="docView" class="view doc"><h2 id="docTitle">README.md 使用说明</h2><p id="docText">这里展示当前工具目录下真实 README.md 的解析结果。切换左侧工具后，这里的内容会随工具变化。</p><div class="doc-card"><b>真实来源</b><p>系统读取当前工具目录中的 README.md，并把内容渲染到这里。</p></div></div></div><div class="splitter vertical" data-resize="assistant" title="拖拽调整助手宽度"></div><aside id="assistant" class="assistant"><div class="assist-title">智能助手</div><div class="card"><h3>现在可以做什么</h3><p id="tip">先选择要处理的文件夹。如果不确定工具用途，可以打开“使用说明”。</p></div><div class="card"><h3>一键帮我</h3><div class="chips"><button class="chip">解释当前设置</button><button class="chip">推荐处理方式</button><button class="chip">查看问题原因</button></div></div><div class="card"><h3>运行前确认</h3><p id="checkText">还没有选择文件夹，请先点击“选择文件夹”。</p></div></aside></section><div class="splitter horizontal" data-resize="log" title="拖拽调整执行过程高度"></div><section class="log-panel"><div class="log-tabs"><b>执行过程</b><div class="log-tools"><span id="logState">等待开始。</span><button id="runBtn" class="log-tool primary">运行</button><button id="stopBtn" class="log-tool danger">停止</button></div></div><div id="log" class="log-body">提示：选择工具，填写信息，然后点击底部“运行”。</div></section></main>
     </div>
     <footer class="status"><span>CedarEx 工具台</span><span>智能助手已就绪</span></footer>
   </div>
@@ -72,6 +72,42 @@
     $('#stopBtn').addEventListener('click', () => {
       $('#logState').textContent = '已请求停止。';
       $('#log').innerHTML += '<br><span style="color:#cf222e">[停止]</span> 已请求停止当前任务。';
+    });
+    const frame = $('.frame');
+    const main = $('.main');
+    const work = $('#work');
+    const content = $('.content');
+    let drag = null;
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    $$('.splitter').forEach((bar) => bar.addEventListener('pointerdown', (event) => {
+      drag = { type: bar.dataset.resize, startX: event.clientX, startY: event.clientY };
+      bar.classList.add('dragging');
+      document.body.classList.add(drag.type === 'log' ? 'resizing-y' : 'resizing');
+      bar.setPointerCapture(event.pointerId);
+    }));
+    window.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      const rect = frame.getBoundingClientRect();
+      if (drag.type === 'sidebar') {
+        const width = clamp(event.clientX - rect.left, 220, 420);
+        main.style.gridTemplateColumns = `${width}px 4px minmax(0,1fr)`;
+      }
+      if (drag.type === 'assistant') {
+        const contentRect = content.getBoundingClientRect();
+        const width = clamp(contentRect.right - event.clientX, 280, 520);
+        content.style.gridTemplateColumns = `minmax(0,1fr) 4px ${width}px`;
+      }
+      if (drag.type === 'log') {
+        const workRect = work.getBoundingClientRect();
+        const height = clamp(workRect.bottom - 24 - event.clientY, 180, 420);
+        work.style.gridTemplateRows = `36px minmax(0,1fr) 4px ${height}px`;
+      }
+    });
+    window.addEventListener('pointerup', () => {
+      if (!drag) return;
+      $$('.splitter').forEach((bar) => bar.classList.remove('dragging'));
+      document.body.classList.remove('resizing', 'resizing-y');
+      drag = null;
     });
   </script>
 </body>
