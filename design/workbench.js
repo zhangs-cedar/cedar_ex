@@ -1,17 +1,23 @@
 const DATA = {
   tools: [
-    { type: 'group', name: '常用工具', open: true },
-    { id: 'image', name: '图像一致性检查', desc: '检查图片尺寸、命名和数量。', indent: 1 },
-    { id: 'rename', name: '批量重命名', desc: '按规则整理文件名，运行前会生成预览。', indent: 1 },
-    { id: 'report', name: '结果汇总报告', desc: '把多份结果合成一份报告。', indent: 1 },
-    { type: 'group', name: '数据检查', open: true },
-    { id: 'data', name: '数据完整性检查', desc: '检查缺失文件和空目录。', indent: 1 },
-    { id: 'size', name: '图片尺寸统计', desc: '统计宽高、格式和异常值。', indent: 1 },
-    { id: 'deliver', name: '交付目录检查', desc: '检查交付目录命名规范。', indent: 1 },
+    {
+      type: 'group', id: 'common', name: '常用工具', open: true, children: [
+        { id: 'image', name: '图像一致性检查', desc: '检查图片尺寸、命名和数量。' },
+        { id: 'rename', name: '批量重命名', desc: '按规则整理文件名，运行前会生成预览。' },
+        { id: 'report', name: '结果汇总报告', desc: '把多份结果合成一份报告。' },
+      ],
+    },
+    {
+      type: 'group', id: 'dataGroup', name: '数据检查', open: true, children: [
+        { id: 'data', name: '数据完整性检查', desc: '检查缺失文件和空目录。' },
+        { id: 'size', name: '图片尺寸统计', desc: '统计宽高、格式和异常值。' },
+        { id: 'deliver', name: '交付目录检查', desc: '检查交付目录命名规范。' },
+      ],
+    },
     {
       type: 'group', id: 'fileGroup', name: '文件整理', open: false, children: [
-        { id: 'zip', name: '压缩包批量解压', desc: '批量解压并整理目录。', indent: 1 },
-      ]
+        { id: 'zip', name: '压缩包批量解压', desc: '批量解压并整理目录。' },
+      ],
     },
   ],
 };
@@ -24,33 +30,36 @@ const state = { selectedTool: 'image', drag: null };
 function renderTree() {
   const tree = $('[data-tool-tree]');
   tree.innerHTML = '';
-  DATA.tools.forEach((item) => renderTreeItem(tree, item));
+  DATA.tools.forEach((item) => renderTreeItem(tree, item, 0));
 }
 
-function renderTreeItem(parent, item) {
+function renderTreeItem(parent, item, depth) {
   const button = document.createElement('button');
   if (item.type === 'group') {
-    button.className = 'tree-row tree-row--group';
+    button.className = `tree-row tree-row--group tree-row--indent-${depth}`;
     button.innerHTML = `<span class="tree-row__twisty">${item.open ? '▾' : '▸'}</span><span class="tree-row__name">${item.name}</span>`;
     button.addEventListener('click', () => {
       item.open = !item.open;
       renderTree();
     });
     parent.appendChild(button);
-    if (item.open && item.children) item.children.forEach((child) => renderTreeItem(parent, child));
+    if (item.open && item.children) item.children.forEach((child) => renderTreeItem(parent, child, depth + 1));
     return;
   }
 
-  button.className = `tree-row tree-row--indent-${item.indent || 0} ${state.selectedTool === item.id ? 'is-active' : ''}`;
+  button.className = `tree-row tree-row--indent-${depth} ${state.selectedTool === item.id ? 'is-active' : ''}`;
   button.innerHTML = `<span class="tree-row__twisty"></span><span class="tree-row__name">${item.name}</span>`;
   button.addEventListener('click', () => selectTool(item.id));
   parent.appendChild(button);
 }
 
 function getTool(id) {
-  const flat = [];
-  DATA.tools.forEach((item) => item.children ? flat.push(...item.children) : flat.push(item));
+  const flat = flattenTools(DATA.tools);
   return flat.find((item) => item.id === id) || flat.find((item) => item.id === 'image');
+}
+
+function flattenTools(items) {
+  return items.flatMap((item) => item.children ? flattenTools(item.children) : [item]);
 }
 
 function selectTool(id) {
