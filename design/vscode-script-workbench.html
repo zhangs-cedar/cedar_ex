@@ -1,114 +1,84 @@
 <!doctype html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CedarEx 工具台交互设计图</title>
-  <style>
-    :root{color-scheme:light;--bg:#fff;--top:#f6f6f6;--side:#f3f3f3;--panel:#fbfbfb;--bd:#d6d6d6;--text:#1f2328;--muted:#667085;--blue:#0969da;--red:#cf222e;--hover:#eaeef2}
-    *{box-sizing:border-box}body{margin:0;background:#f6f8fa;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;user-select:text}button,input,select,.titlebar{user-select:auto}.frame{width:1440px;height:900px;margin:0 auto;background:var(--bg);display:grid;grid-template-rows:34px 1fr 24px;box-shadow:0 22px 80px rgba(31,35,40,.18);overflow:hidden}.titlebar{background:var(--top);display:flex;align-items:center;padding:0 10px;border-bottom:1px solid var(--bd)}.traffic{display:flex;gap:8px}.traffic span{width:12px;height:12px;border-radius:50%;display:block}.red-dot{background:#ff5f57}.yellow-dot{background:#ffbd2e}.green-dot{background:#28c840}.main{min-height:0;display:grid;grid-template-columns:300px minmax(0,1fr)}::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:#f1f1f1}::-webkit-scrollbar-thumb{background:#c5c8cc;border:2px solid transparent;border-radius:8px;background-clip:content-box}
-    .sidebar{min-height:0;background:var(--side);border-right:1px solid var(--bd);padding:12px 0 0;display:grid;grid-template-rows:auto auto auto 1fr;overflow:hidden}.side-title{font-size:12px;color:#57606a;margin:0 12px 10px;font-weight:700;text-transform:uppercase}.search{width:calc(100% - 20px);height:30px;margin:0 10px;border:1px solid #d0d7de;border-radius:4px;background:#fff;color:#24292f;padding:0 9px;font-size:13px}.side-row{margin:10px 10px 6px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between}.refresh{color:var(--blue)}.tool-scroll{min-height:0;overflow:auto;padding:2px 0 12px}.tree-row{height:24px;width:100%;display:flex;align-items:center;gap:4px;border:0;background:transparent;color:#24292f;text-align:left;padding:0 8px;font-size:13px;cursor:pointer}.tree-row:hover{background:var(--hover)}.tree-row.active{background:#dbeafe;color:#0b3b75}.tree-row.group{font-weight:600;color:#57606a}.tree-row .twisty{width:14px;color:#57606a}.tree-row .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.indent-1{padding-left:22px}.indent-2{padding-left:38px}
-    .work{min-width:0;min-height:0;display:grid;grid-template-rows:36px minmax(0,1fr) 300px}.tabs{display:flex;background:#ececec;border-bottom:1px solid var(--bd)}.tab{height:36px;padding:9px 16px;border:0;border-right:1px solid var(--bd);background:transparent;color:#57606a;font-size:13px;cursor:pointer}.tab.active{background:#fff;color:#24292f}.content{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 360px;border-bottom:1px solid var(--bd)}.editor{min-height:0;padding:18px;background:#fff;overflow:auto}.taskbar{min-height:58px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:12px}.taskbar b{color:#24292f;font-size:15px}.taskbar p{margin:6px 0 0;color:var(--muted);font-size:13px}.pill{background:#ddf4ff;color:#0969da;border-radius:18px;padding:6px 14px;font-size:13px}.view{display:none}.view.active{display:block}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.field{border:1px solid var(--bd);background:#fbfbfb;border-radius:6px;padding:11px}.field.full{grid-column:1/-1}.field label{display:flex;justify-content:space-between;font-size:12px;color:#24292f;margin-bottom:8px}.input,select{width:100%;height:34px;border:1px solid #d0d7de;background:#fff;border-radius:4px;color:#24292f;padding:6px 8px}.placeholder{color:#667085}.path-row{display:grid;grid-template-columns:1fr 88px;gap:8px}.btn,.log-tool,.chip{border:1px solid #d0d7de;background:#fff;color:#24292f;border-radius:4px;padding:7px 12px;font-weight:700;cursor:pointer}.btn.primary,.log-tool.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.danger,.log-tool.danger{color:var(--red)}.hint{margin-top:8px;color:#667085;font-size:12px}.doc h2{margin:16px 0 10px;font-size:20px;color:#24292f}.doc p{line-height:1.8;color:#24292f}.doc-card{border:1px solid var(--bd);background:#fbfbfb;border-radius:6px;padding:14px;margin-top:12px}
-    .assistant{min-height:0;background:#f6f8fa;border-left:1px solid var(--bd);padding:18px 16px;overflow:auto}.assist-title{font-size:13px;color:#24292f;margin-bottom:12px;font-weight:700}.card{border:1px solid var(--bd);border-radius:5px;background:#fff;margin-bottom:12px;padding:14px}.card h3{font-size:15px;margin:0 0 10px;color:#24292f}.card p{font-size:13px;line-height:1.7;color:#667085;margin:0}.chips{display:flex;gap:10px;flex-wrap:wrap}.chip{border-radius:999px;padding:7px 10px}.log-panel{min-height:0;display:grid;grid-template-rows:35px 1fr;background:var(--panel)}.log-tabs{background:#f6f8fa;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:18px;padding:0 12px;font-size:12px;color:#667085}.log-tabs b{height:35px;display:flex;align-items:center;color:#24292f;border-bottom:2px solid var(--blue)}.log-tools{margin-left:auto;display:flex;align-items:center;gap:10px}.log-tool{padding:4px 12px}.log-body{min-height:0;background:#fbfbfb;color:#24292f;font:13px Consolas,"SFMono-Regular",monospace;line-height:1.7;padding:12px 14px;overflow:auto}.status{background:#0969da;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px}
-  </style>
+  <link rel="stylesheet" href="workbench.css" />
 </head>
+
 <body>
-  <div class="frame">
-    <header class="titlebar"><div class="traffic"><span class="red-dot"></span><span class="yellow-dot"></span><span class="green-dot"></span></div></header>
-    <div class="main">
-      <aside id="sidebar" class="sidebar"><div class="side-title">资源管理器</div><input id="search" class="search" placeholder="搜索工具..." /><div class="side-row"><span id="toolCount">18 个工具</span><span class="refresh">刷新</span></div><div class="tool-scroll"><button class="tree-row group"><span class="twisty">▾</span><span class="name">常用工具</span></button><button class="tree-row tool active indent-1" data-tool="image"><span class="twisty"></span><span class="name">图像一致性检查</span></button><button class="tree-row tool indent-1" data-tool="rename"><span class="twisty"></span><span class="name">批量重命名</span></button><button class="tree-row tool indent-1" data-tool="report"><span class="twisty"></span><span class="name">结果汇总报告</span></button><button class="tree-row group"><span class="twisty">▾</span><span class="name">数据检查</span></button><button class="tree-row tool indent-1" data-tool="data"><span class="twisty"></span><span class="name">数据完整性检查</span></button><button class="tree-row tool indent-1" data-tool="size"><span class="twisty"></span><span class="name">图片尺寸统计</span></button><button class="tree-row tool indent-1" data-tool="deliver"><span class="twisty"></span><span class="name">交付目录检查</span></button><button class="tree-row group collapsible" data-target="fileGroup"><span class="twisty">▸</span><span class="name">文件整理</span></button><div id="fileGroup" hidden><button class="tree-row tool indent-1" data-tool="zip"><span class="twisty"></span><span class="name">压缩包批量解压</span></button></div><button class="tree-row group collapsible" data-target="reportGroup"><span class="twisty">▸</span><span class="name">报告工具</span></button><div id="reportGroup" hidden><button class="tree-row tool indent-1" data-tool="html"><span class="twisty"></span><span class="name">报告格式转换</span></button></div></div></aside><div class="splitter vertical" data-resize="sidebar" title="拖拽调整左侧宽度"></div>
-      <main id="work" class="work"><div class="tabs"><button class="tab active" data-view="form">填写信息</button><button class="tab" data-view="doc">使用说明</button></div><section class="content"><div class="editor"><div id="formView" class="view active"><div class="form-grid"><div class="field full"><label><span>请选择要处理的文件夹 *</span><span>必填</span></label><div class="path-row"><input id="folderInput" class="input placeholder" value="请选择文件夹" /><button id="chooseBtn" class="btn">选择文件夹</button></div><div class="hint">只需要选择文件夹，不需要输入命令。</div></div><div class="field"><label><span>处理方式</span><span>推荐默认</span></label><select id="mode"><option>完整检查</option><option>只检查数量</option><option>只检查尺寸</option></select></div><div class="field"><label><span>处理速度</span><span>推荐自动</span></label><select><option>自动</option><option>较慢但更稳</option></select></div><div class="field full"><label><span>报告保存位置</span><span>自动生成</span></label><input class="input" value="自动保存到：输出报告文件夹" /></div></div></div><div id="docView" class="view doc"><h2 id="docTitle">README.md 使用说明</h2><p id="docText">这里展示当前工具目录下真实 README.md 的解析结果。切换左侧工具后，这里的内容会随工具变化。</p><div class="doc-card"><b>真实来源</b><p>系统读取当前工具目录中的 README.md，并把内容渲染到这里。</p></div></div></div><div class="splitter vertical" data-resize="assistant" title="拖拽调整助手宽度"></div><aside id="assistant" class="assistant"><div class="assist-title">智能助手</div><div class="card"><h3>现在可以做什么</h3><p id="tip">先选择要处理的文件夹。如果不确定工具用途，可以打开“使用说明”。</p></div><div class="card"><h3>一键帮我</h3><div class="chips"><button class="chip">解释当前设置</button><button class="chip">推荐处理方式</button><button class="chip">查看问题原因</button></div></div><div class="card"><h3>运行前确认</h3><p id="checkText">还没有选择文件夹，请先点击“选择文件夹”。</p></div></aside></section><div class="splitter horizontal" data-resize="log" title="拖拽调整执行过程高度"></div><section class="log-panel"><div class="log-tabs"><b>执行过程</b><div class="log-tools"><span id="logState">等待开始。</span><button id="runBtn" class="log-tool primary">运行</button><button id="stopBtn" class="log-tool danger">停止</button></div></div><div id="log" class="log-body">提示：选择工具，填写信息，然后点击底部“运行”。</div></section></main>
+  <div class="workbench" data-workbench>
+    <header class="titlebar" aria-label="窗口栏">
+      <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    </header>
+
+    <div class="shell" data-shell>
+      <aside class="explorer" aria-label="资源管理器">
+        <div class="explorer__title">资源管理器</div>
+        <input class="explorer__search" data-search placeholder="搜索工具..." />
+        <div class="explorer__meta"><span data-tool-count>18 个工具</span><button type="button">刷新</button></div>
+        <nav class="tree" aria-label="工具树" data-tool-tree></nav>
+      </aside>
+
+      <div class="splitter splitter--vertical" data-resize="explorer" title="拖拽调整左侧宽度"></div>
+
+      <main class="main-panel" data-main-panel>
+        <div class="tabs" role="tablist">
+          <button class="tab is-active" data-view-tab="form" type="button">填写信息</button>
+          <button class="tab" data-view-tab="readme" type="button">使用说明</button>
+        </div>
+
+        <section class="content-panel">
+          <section class="editor" aria-label="中心内容">
+            <div class="view is-active" data-view="form">
+              <div class="form-grid">
+                <div class="field field--full">
+                  <label><span>请选择要处理的文件夹 *</span><span>必填</span></label>
+                  <div class="path-row"><input class="input is-placeholder" data-folder-input value="请选择文件夹" /><button
+                      class="button" data-choose-folder type="button">选择文件夹</button></div>
+                  <div class="hint">只需要选择文件夹，不需要输入命令。</div>
+                </div>
+                <div class="field"><label><span>处理方式</span><span>推荐默认</span></label><select class="input" data-mode>
+                    <option>完整检查</option>
+                    <option>只检查数量</option>
+                    <option>只检查尺寸</option>
+                  </select></div>
+                <div class="field"><label><span>处理速度</span><span>推荐自动</span></label><select class="input">
+                    <option>自动</option>
+                    <option>较慢但更稳</option>
+                  </select></div>
+                <div class="field field--full"><label><span>报告保存位置</span><span>自动生成</span></label><input class="input"
+                    value="自动保存到：输出报告文件夹" /></div>
+              </div>
+            </div>
+
+            <div class="view markdown" data-view="readme">
+              <h2 data-doc-title>README.md 使用说明</h2>
+              <p data-doc-text>这里展示当前工具目录下真实 README.md 的解析结果。切换左侧工具后，这里的内容会随工具变化。</p>
+              <div class="doc-card"><b>真实来源</b>
+                <p>系统读取当前工具目录中的 README.md，并把内容渲染到这里。</p>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <div class="splitter splitter--horizontal" data-resize="log" title="拖拽调整执行过程高度"></div>
+
+        <section class="log-panel" aria-label="执行过程">
+          <div class="log-toolbar"><b>执行过程</b>
+            <div class="log-actions"><span data-log-state>等待开始。</span><button class="button button--primary" data-run
+                type="button">运行</button><button class="button button--danger" data-stop type="button">停止</button></div>
+          </div>
+          <pre class="log-output" data-log>提示：选择工具，填写信息，然后点击底部“运行”。</pre>
+        </section>
+      </main>
     </div>
-    <footer class="status"><span>CedarEx 工具台</span><span>智能助手已就绪</span></footer>
+
+    <footer class="statusbar"><span>CedarEx 工具台</span><span>就绪</span></footer>
   </div>
-  <script>
-    const $ = (s) => document.querySelector(s);
-    const $$ = (s) => Array.from(document.querySelectorAll(s));
-    const tools = {
-      image: ['图像一致性检查', '检查图片尺寸、命名和数量。'],
-      rename: ['批量重命名', '按规则整理文件名，运行前会生成预览。'],
-      report: ['结果汇总报告', '把多份结果合成一份报告。'],
-      data: ['数据完整性检查', '检查缺失文件和空目录。'],
-      size: ['图片尺寸统计', '统计宽高、格式和异常值。'],
-      deliver: ['交付目录检查', '检查交付目录命名规范。'],
-      zip: ['压缩包批量解压', '批量解压并整理目录。'],
-      html: ['报告格式转换', '把 CSV 转成 HTML 报告。']
-    };
-    let current = 'image';
-    $$('.tab').forEach((tab) => tab.addEventListener('click', () => {
-      $$('.tab').forEach((x) => x.classList.remove('active'));
-      tab.classList.add('active');
-      $$('.view').forEach((x) => x.classList.remove('active'));
-      $('#' + tab.dataset.view + 'View').classList.add('active');
-    }));
-    $$('.tool').forEach((btn) => btn.addEventListener('click', () => {
-      current = btn.dataset.tool;
-      $$('.tool').forEach((x) => x.classList.remove('active'));
-      btn.classList.add('active');
-      const [name, desc] = tools[current];
-      $('#docTitle').textContent = name + ' 使用说明';
-      $('#docText').textContent = '这里展示“' + name + '”目录下真实 README.md 的解析结果。' + desc;
-      $('#tip').textContent = '当前选择：' + name + '。填写必要信息后点击底部“运行”。';
-      $('#checkText').textContent = '还没有选择文件夹，请先点击“选择文件夹”。';
-      $('#log').textContent = '已选择：' + name + '。';
-      $('#logState').textContent = '等待开始。';
-    }));
-    $$('.collapsible').forEach((btn) => btn.addEventListener('click', () => {
-      const target = $('#' + btn.dataset.target);
-      target.hidden = !target.hidden;
-      btn.querySelector('.twisty').textContent = target.hidden ? '▸' : '▾';
-    }));
-    $('#chooseBtn').addEventListener('click', () => {
-      $('#folderInput').value = '示例数据文件夹';
-      $('#folderInput').classList.remove('placeholder');
-      $('#checkText').textContent = '文件夹已选择，可以点击底部“运行”。';
-    });
-    $('#runBtn').addEventListener('click', () => {
-      const [name] = tools[current];
-      $('#logState').textContent = '正在处理。';
-      $('#log').innerHTML = '正在运行：' + name + '<br>处理文件夹：' + $('#folderInput').value + '<br>处理方式：' + $('#mode').value + '<br><span style="color:#1a7f37">[完成]</span> 处理完成。';
-      setTimeout(() => $('#logState').textContent = '处理完成。', 500);
-    });
-    $('#stopBtn').addEventListener('click', () => {
-      $('#logState').textContent = '已请求停止。';
-      $('#log').innerHTML += '<br><span style="color:#cf222e">[停止]</span> 已请求停止当前任务。';
-    });
-    const frame = $('.frame');
-    const main = $('.main');
-    const work = $('#work');
-    const content = $('.content');
-    let drag = null;
-    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-    $$('.splitter').forEach((bar) => bar.addEventListener('pointerdown', (event) => {
-      drag = { type: bar.dataset.resize, startX: event.clientX, startY: event.clientY };
-      bar.classList.add('dragging');
-      document.body.classList.add(drag.type === 'log' ? 'resizing-y' : 'resizing');
-      bar.setPointerCapture(event.pointerId);
-    }));
-    window.addEventListener('pointermove', (event) => {
-      if (!drag) return;
-      const rect = frame.getBoundingClientRect();
-      if (drag.type === 'sidebar') {
-        const width = clamp(event.clientX - rect.left, 220, 420);
-        main.style.gridTemplateColumns = `${width}px 4px minmax(0,1fr)`;
-      }
-      if (drag.type === 'assistant') {
-        const contentRect = content.getBoundingClientRect();
-        const width = clamp(contentRect.right - event.clientX, 280, 520);
-        content.style.gridTemplateColumns = `minmax(0,1fr) 4px ${width}px`;
-      }
-      if (drag.type === 'log') {
-        const workRect = work.getBoundingClientRect();
-        const height = clamp(workRect.bottom - 24 - event.clientY, 180, 420);
-        work.style.gridTemplateRows = `36px minmax(0,1fr) 4px ${height}px`;
-      }
-    });
-    window.addEventListener('pointerup', () => {
-      if (!drag) return;
-      $$('.splitter').forEach((bar) => bar.classList.remove('dragging'));
-      document.body.classList.remove('resizing', 'resizing-y');
-      drag = null;
-    });
-  </script>
+  <script src="workbench.js"></script>
 </body>
+
 </html>
