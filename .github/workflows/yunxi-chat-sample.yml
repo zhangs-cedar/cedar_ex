@@ -1,10 +1,12 @@
 
-name: Yunxi 30 percent voice sample
+name: Yunxi 20 percent voice sample
 
 on:
   push:
     branches:
       - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/yunxi-chat-sample.yml
 
 permissions:
   contents: read
@@ -36,7 +38,7 @@ jobs:
           import edge_tts
 
           voice = 'zh-CN-YunxiNeural'
-          rate = '+30%'
+          rate = '+20%'
 
           lines = [
               '不是哥们，狮子打赢鬣狗，怎么扭头就走？',
@@ -80,7 +82,7 @@ jobs:
                       break
 
               duration, spoken, path = best
-              shutil.copyfile(path, folder / 'Yunxi+30.mp3')
+              shutil.copyfile(path, folder / 'Yunxi+20.mp3')
               for other in folder.glob('try-*.mp3'):
                   other.unlink()
 
@@ -107,7 +109,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: yunxi-30percent-sample
+          name: yunxi-20percent-sample
           path: voice-test/
           if-no-files-found: warn
           retention-days: 7
