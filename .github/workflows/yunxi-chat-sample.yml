@@ -1,0 +1,107 @@
+
+name: Yunxi 30 percent voice sample
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+
+permissions:
+  contents: read
+
+jobs:
+  yunxi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install edge-tts
+        run: python -m pip install edge-tts==7.3.1
+
+      - name: Generate Yunxi 30s sample
+        run: |
+          python - <<'PY'
+          import asyncio, json, shutil, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          voice = 'zh-CN-YunxiNeural'
+          rate = '+30%'
+
+          lines = [
+              '不是哥们，狮子打赢鬣狗，怎么扭头就走？',
+              '明明牙口这么好，怎么不顺便开饭？',
+              '先纠正一个前提。',
+              '狮子不是绝对不吃鬣狗，而是通常不会把它当成常规猎物。',
+              '所以这个问题，关键不在能不能吃，而在为什么打。',
+              '要弄懂原因，先看看这两位是什么关系。',
+              '简单说，就是竞争对手。',
+              '它们都能自己捕猎，也会抢对方已经到嘴的食物。',
+              '这不就像两个同行，在抢同一份订单吗？',
+              '而且，斑鬣狗并不只是捡剩饭的。',
+              '它也有一身捕猎本事，双方在草原上经常遇到。',
+              '打赢一架，不代表下一秒就要吃掉对方。',
+          ]
+
+          folder = Path('voice-test')
+          folder.mkdir(exist_ok=True)
+
+          async def main():
+              best = None
+              for n in range(4, len(lines) + 1):
+                  spoken = ''.join(lines[:n])
+                  candidate = folder / f'try-{n}.mp3'
+                  await edge_tts.Communicate(
+                      text=spoken, voice=voice, rate=rate
+                  ).save(str(candidate))
+
+                  duration = float(subprocess.check_output([
+                      'ffprobe', '-v', 'error',
+                      '-show_entries', 'format=duration',
+                      '-of', 'default=noprint_wrappers=1:nokey=1',
+                      str(candidate)
+                  ], text=True).strip())
+
+                  print(f'Sentences={n}, duration={duration:.2f}s', flush=True)
+
+                  if best is None or abs(duration - 30) < abs(best[0] - 30):
+                      best = (duration, spoken, candidate)
+                  if duration >= 27:
+                      break
+
+              duration, spoken, path = best
+              shutil.copyfile(path, folder / 'Yunxi+30.mp3')
+              for other in folder.glob('try-*.mp3'):
+                  other.unlink()
+
+              (folder / 'script.txt').write_text(
+                  spoken, encoding='utf-8'
+              )
+              (folder / 'result.json').write_text(
+                  json.dumps({
+                      'voice': voice,
+                      'rate': rate,
+                      'duration_seconds': round(duration, 2),
+                      'accepted_27_to_33_seconds': 27 <= duration <= 33
+                  }, ensure_ascii=False, indent=2),
+                  encoding='utf-8'
+              )
+
+              if not (27 <= duration <= 33):
+                  raise RuntimeError('Sample outside 27-33 seconds')
+
+          asyncio.run(main())
+          PY
+
+      - name: Upload MP3 and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yunxi-30percent-sample
+          path: voice-test/
+          if-no-files-found: warn
+          retention-days: 7
