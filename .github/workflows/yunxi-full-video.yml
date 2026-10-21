@@ -89,7 +89,7 @@ jobs:
               for i, script in enumerate(SCRIPTS, 1):
                   target = AUDIO / f'{i:02}.mp3'
                   bounds = []
-                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE)
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
                   with target.open('wb') as f:
                       async for chunk in talk.stream():
                           if chunk['type'] == 'audio':
@@ -137,6 +137,7 @@ jobs:
           assert d['voice']=='zh-CN-YunxiNeural'
           assert d['rate']=='+20%'
           assert d['scene_count']==6
+          assert d['word_boundaries_found']==6, 'Expected WordBoundary timestamps for all six scenes'
           assert d['duration_seconds']>60
           print(json.dumps(d,ensure_ascii=False,indent=2))
           PY
