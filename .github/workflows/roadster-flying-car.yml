@@ -1,0 +1,159 @@
+name: Roadster flying car Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/roadster-flying-car.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all eight scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              '马斯克的飞行汽车，真的飞起来了吗？二零二六年十月十五日，特斯拉在美国得克萨斯州展示了新一代 Roadster。它能在空中翻转，还能借助特殊装置贴着倒置坡道行驶。现场画面确实震撼，但先别急着说汽车时代结束了。我们要分清楚：短暂腾空，和像飞机一样持续飞行，根本不是一回事。',
+              '先看演示到底发生了什么。Roadster 先驶上弯曲坡道，在车身倒过来时仍然紧贴表面；随后离开坡道，在空中转身并落回车轮。另一个环节，车辆还借助喷气装置跃过障碍。路透社在十月十五日的报道中描述了这些演示。不过，这证明的是受控条件下的动作展示，并不意味着它已经能在城市上空自由飞行。',
+              '第一项关键技术，是冷气推进器。它不是把汽油点燃，也不是普通电动车的电机。原理是先把气体压缩储存，再从喷口高速喷出。根据牛顿第三定律，气体向一个方向喷射，车就会受到反方向的推力。如果喷口朝下，车辆可能获得向上的力；如果喷口朝后，车辆就会获得向前的额外加速度。',
+              '第二项技术，恰恰是让车更贴地的吸附系统。特斯拉官网把它称为多模式风扇与地面密封系统。风扇抽走车底的空气，让车底压力降低，形成向下的附着效果。这样车辆即使速度很低，也可能获得很强的抓地力。演示中倒挂坡道的效果，主要对应的就是这套系统，而不是凭空抵消了地球引力。',
+              '第三个问题：这到底算不算飞行汽车？要看你怎么定义。短时间跳跃、翻转和稳定姿态，与长时间悬停、持续爬升、导航和安全降落不是同一级别的能力。特斯拉官网明确提到，Rocket 版本可以实现向上加速与空中姿态调整，但没有公开证明它具备成熟的长距离持续飞行能力。这里最重要的不是营销名称，而是已经验证了什么。',
+              '再看三个版本的区别。特斯拉官网列出了基础性能配置、增强推力的 Thrust，以及邀请制的 Rocket。普通 Roadster 是高性能电动跑车；Thrust 侧重用喷气装置提升加速；Rocket 才主打空中运动能力。官网还明确标注，Rocket 配置没有获得公共道路使用批准。所以不要把展示车的所有能力，直接套在未来每一辆量产车上。',
+              '很多人最关心的是，什么时候能买？马斯克在发布会上给出的量产目标是二零二八年。但这只是计划，不是交付保证。第二代 Roadster 早在二零一七年就曾亮相，最初公布过更早的上市时间，后来多次推迟。即便工程样车可以完成特技，量产还要解决可靠性、成本、碰撞安全、法规，以及不同地区能不能合法使用的问题。',
+              '最后，给这辆车一个准确定位：它是一辆尝试把航空推进技术搬上公路的超级跑车，不是已经普及的空中出租车。真正值得关注的是三件事：冷气喷射能否重复、安全地工作；吸附系统能否在真实路况下稳定运行；以及二零二八年的量产目标能否兑现。看懂技术原理，再看清演示边界，才不会被飞行汽车四个字带跑。'
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/6 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, six scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==6
+          assert d['word_boundaries_found']==6, 'Expected WordBoundary timestamps for all six scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: roadster-flying-car-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
