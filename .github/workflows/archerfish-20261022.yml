@@ -1,0 +1,160 @@
+name: Archerfish funny science Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/archerfish-20261022.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all nine scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "你见过上班不用手，直接用嘴远程打饭的吗？水面上，一只小虫正悠闲地开会。下一秒，水里突然飞出一发水弹。虫子一脸懵：谁在楼下开水枪？别急着笑，这不是动画瞎编。今天的主角射水鱼，真的靠喷水把水面上的昆虫打下来。",
+              "欢迎来到射水鱼的求职现场。职位：水下狙击手。装备：一张嘴。弹药：水，甚至都不用带出门。它常在热带河口和红树林附近活动，发现露在水面上的虫子，就靠近水面，调整姿势，准备发射。旁边的小鱼还在找鱼竿，它已经开始面试了。",
+              "你以为它只是噗地吐一口口水？可没这么简单。射水鱼会调整口腔和鳃盖的动作，让水从嘴里形成一股高速喷流。鱼嘴就像可调节的喷口。这不是带电的水枪，也没有迷你发动机，动力来自鱼自己对水的控制。动作一开始，尾巴也在帮它稳住身体。",
+              "但问题来了。小虫明明就在树叶上，射水鱼为什么还要认真瞄准？因为光线经过空气和水面时会折射。水下看到的位置，和虫子真实的位置可能不一样。人类隔着水看吸管，也会觉得它突然弯了。射水鱼的难题，就是不能只听眼睛报的坐标。",
+              "更厉害的是，射出去的水还会变形。研究人员发现，射水鱼能调整水柱，让水在接近目标时聚成更有冲击力的一团。你可以把它理解成：不是一路撒花洒，而是尽量把力量在快击中时集中。小虫刚想说你这枪不准，下一秒就发现自己想早了。",
+              "不过它也不是百分之百命中。研究人员还在水面上方吹风，故意干扰它的水柱。刚开始，鱼果然会打偏。换成人类大概已经把键盘拍坏了。但它没有放弃，连续试过几次后，误差逐渐缩小。这说明射水鱼能根据环境变化调整自己的发射动作。",
+              "最好笑的来了：研究里的射水鱼，就像考驾照，风向一变还得重新练。等它适应之后，研究人员把风突然关掉，射击方向反而又偏到了另一边。这种反向偏差，叫做适应后的余效。别把它神化成会算高等数学，但它确实有让动作逐步适应环境的能力。",
+              "那它只会打停在那儿的虫子吗？也不完全是。二零零六年的实验发现，经过训练的射水鱼能打中快速移动的目标。更有意思的是，有些鱼甚至可以通过观察同伴的表现学会这项复杂任务。这个画面很像一条鱼在旁边看教学视频：哇，原来还可以这样。",
+              "所以，射水鱼的绝活不是嘴巴火力大，而是看见目标、控制水柱、根据结果调整动作。水里一个小小的猎手，给我们上了一堂免费的物理课。至于今天那只小虫？它已经连夜修改简历：本人擅长飞行，拒绝临水办公。你还知道哪种动物，拥有离谱又真实的捕猎技能？"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/9 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, nine scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==9
+          assert d['word_boundaries_found']==9, 'Expected WordBoundary timestamps for all nine scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: archerfish-20261022-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
