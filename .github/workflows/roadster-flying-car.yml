@@ -105,7 +105,7 @@ jobs:
                       cue['end'] += absolute
                   segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
                   absolute += sec
-                  print(f'{i}/6 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+                  print(f'{i}/8 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
 
               timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
               (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -122,7 +122,7 @@ jobs:
               for wav in wavs:
                   wav.unlink()
               (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
-              print(f'COMPLETE: {absolute:.2f}s, six scenes, {len(cues)} subtitle cues',flush=True)
+              print(f'COMPLETE: {absolute:.2f}s, eight scenes, {len(cues)} subtitle cues',flush=True)
 
           asyncio.run(main())
           PY
@@ -138,8 +138,8 @@ jobs:
           d=json.load(open('voice_manifest.json',encoding='utf-8'))
           assert d['voice']=='zh-CN-YunxiNeural'
           assert d['rate']=='+20%'
-          assert d['scene_count']==6
-          assert d['word_boundaries_found']==6, 'Expected WordBoundary timestamps for all six scenes'
+          assert d['scene_count']==8
+          assert d['word_boundaries_found']==8, 'Expected WordBoundary timestamps for all eight scenes'
           assert d['duration_seconds']>60
           print(json.dumps(d,ensure_ascii=False,indent=2))
           PY
