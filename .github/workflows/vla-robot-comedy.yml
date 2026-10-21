@@ -1,0 +1,159 @@
+name: VLA Robot comedy Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/vla-robot-comedy.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all eight scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              '我跟你说，机器人最尴尬的工作，不是拯救世界，是给人倒杯水。你说一句，把桌上的杯子拿过来。它先看杯子，再看你，仿佛在思考：这杯子有编制吗？以前机器人更像只会背标准答案的考生。桌子稍微挪一点，动作就可能不对。现在研究人员想给它装一种新脑子，叫 VLA。',
+              '先认识老式机器人。工厂里，机械臂可以沿着预设路线，精准重复上千次操作。但换个位置、换种杯子，往往就得调整程序。就像你让一个人闭着眼，永远朝前走三步，再伸手拿杯子。只要杯子被猫推走了，恭喜，你拿到的是空气。VLA 想让机器人少死记硬背，多看现场。',
+              'V 是 Vision，也就是视觉。机器人得先看懂眼前到底是什么。桌上有杯子、香蕉，还有一部手机；目标是杯子，障碍物是香蕉，手机属于千万别碰的那位。模型可以利用摄像头画面，有些还会结合机械臂自身的状态。但看见不等于拿得稳，视觉只是这场考试的第一道题。',
+              'L 是 Language，语言。你不会每次都对机器人说，二号关节转三十度、夹爪下降五厘米。你只想说一句：把杯子拿给我。语言负责告诉系统任务目标。它需要把人话和现场画面对起来：哪个是杯子，应该先靠近哪一边。说得好听叫语义理解，说得直白点，就是终于不用用关节角度跟它聊天。',
+              'A 才是最关键的 Action，动作。普通聊天模型可以滔滔不绝地说，好的，我已经帮你拿了。可杯子还在桌上。VLA 则尝试把看到的场景和听懂的任务，直接连接到机器人的动作输出，比如手臂怎么移动、夹爪什么时候合拢。有些模型会一次预测一小段动作，然后重新看画面，继续调整。',
+              '那它是怎么学会的？可不是每天坐在工位上背牛顿定律。研究人员会收集机器人操作的示范：镜头看到了什么、人下达什么任务、机械臂实际上怎么动。模型从这些数据里学习关联。你可以想象，它正在看无数段实习教学视频。区别是人类实习生会摸鱼，它可能把杯子夹得像核桃。',
+              '听上去已经能包办家务了？先别着急给机器人办理入职。真实世界非常会出题：透明杯子难观察，塑料袋会变形，桌面被人撞一下，夹爪还可能抓空。模型推理也需要时间，动作慢半拍可能就错过了目标。所以研究还在改进泛化能力、反馈速度和操作可靠性。好看的演示，不等于各种家庭都能稳定复现。',
+              '目前谷歌 DeepMind 的 Gemini Robotics、Physical Intelligence 的 π 系列，以及开源的 SmolVLA，都在探索让机器人把看、听指令和做动作连起来。路线和能力各不相同，也不能把研究演示直接等于量产家政工人。记住 VLA 就三个字：看现场，听人话，动真格。至于什么时候能帮你洗碗？我建议先别买水晶杯给它练手。'
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/8 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, eight scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==8
+          assert d['word_boundaries_found']==8, 'Expected WordBoundary timestamps for all eight scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: vla-robot-comedy-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
