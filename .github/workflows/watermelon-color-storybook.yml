@@ -1,0 +1,161 @@
+name: Watermelon color storybook Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/watermelon-color-storybook.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all ten scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "问你一道能让物理老师和哲学老师当场吵起来的问题：切开的西瓜瓤是红色的。那切开之前呢？一颗西瓜今天被请上了法庭。西瓜说：我就想安静地当个水果，怎么还需要辩论赛？",
+              "第一位选手直接举牌：黑色！理由特别朴素：西瓜没切开，里面没光，不就是黑的吗？旁边的番茄炒蛋听完默默关灯：好家伙，我一秒变成墨鱼汁拌皮蛋？等等，黑暗里看不见红，不等于红色物质突然消失。",
+              "这时候，哲学老师拍桌子：你们连颜色是什么都没定义，就敢抢答？如果颜色指的是眼睛看到的体验，那没有光线、没有观察者，确实谈不上有人看到了红。注意，这是一种关于颜色怎么定义的说法，不是说瓜瓤真的变成了黑色染料。",
+              "物理老师不服，推出一台光谱仪：我们日常说红苹果、红西瓜，通常还在说它的材料在合适光照下会怎样反射光。红瓤西瓜里有一种叫番茄红素的色素，它负责典型的红色。切开前，这些分子并不是被刀临时安装进去的。",
+              "现在请光子阿光上场！阿光拿着各种颜色的灯冲向瓜瓤，瓜瓤会吸收一部分波长，再反射、散射一部分光。光进入人眼后，大脑才形成颜色体验。也就是说，材料性质、照明条件和观察者，像三个组队做题的队友，少一个，题目的问法就得变。",
+              "突然第三位辩手举手：反对！你看到切开后是红色，能百分之百逻辑证明切开前也是红色吗？不能只靠这一眼。假如切开的过程改变了某种性质呢？这是原文里最有意思的怀疑论立场：不是断言切开前一定不红，而是说证据和推理的要求不同。",
+              "物理老师扶了扶眼镜：科学研究可不只盯着你刚切开的那一刀。我们能研究成熟过程中色素怎样积累，也能分析不同品种的瓜瓤组织。对一个成熟、正常的红瓤西瓜来说，说它切开前就具有产生红色外观的物质基础，是非常合理的判断。",
+              "不过西瓜家族突然走出一位黄色亲戚：等等！也不是每个西瓜天生红心。还有黄瓤、橙瓤，没熟的瓜颜色也可能不一样。那道题先说切开后看到红色，这才限定了讨论对象。别一激动，把全世界的西瓜都判成同一个色号。",
+              "法官终于敲槌：判决来了！问没人照亮时能不能看到红，答案是看不到；问它有没有决定反射特性的物质结构，红瓤西瓜通常有；问切开后的观察能否构成绝对无条件的逻辑证明，那就没那么简单。三个人吵半天，其实是在回答三个不同的问题。",
+              "最后，西瓜发表获奖感言：小学只问我甜不甜，初中问我红不红，大学开始要求定义颜色，研究生直接问观察者存在不存在。求求你们，能不能先让我上桌？所以你觉得，切开前的西瓜瓤是什么颜色？记得先告诉我，你说的颜色到底指什么。"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/10 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, ten scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==10
+          assert d['word_boundaries_found']==10, 'Expected WordBoundary timestamps for all ten scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: watermelon-color-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
