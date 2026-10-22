@@ -1,0 +1,160 @@
+name: Why Animals Sleep video Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/animal-sleep-wild-theater-yunxi20.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          python -m pip install --disable-pip-version-check --quiet edge-tts==7.3.1 imageio-ffmpeg mutagen
+          python -c 'import edge_tts, imageio_ffmpeg, mutagen; print(imageio_ffmpeg.get_ffmpeg_exe())'
+
+      - name: Synthesize all twelve scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess, imageio_ffmpeg
+          from mutagen.mp3 import MP3
+          FFMPEG=imageio_ffmpeg.get_ffmpeg_exe()
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "你有没有想过一件很离谱的事？草原上的狮子刚打完一架，转头找块草地就睡了。鬣狗在旁边看得一脸问号：你确定要在食物链里按暂停键？睡着以后，吃不到饭，还可能被别人偷袭。既然这么危险，为什么动物们还是舍不得睡觉？",
+              "先把代价摆出来。睡觉的时候，动物通常活动减少，对外界刺激反应变慢。野外没有防盗门，也没有闹钟提醒：危险正在接近。光从找食物和躲天敌的角度看，睡觉简直像游戏里主动把操作权限交出去。可演化没有轻易把这个功能删掉，说明它带来的收益可能很重要。",
+              "更奇妙的是，不只有狮子、人和猫会睡。鱼、果蝇也有睡眠或睡眠样行为。二零一七年的研究发现，倒立水母夜间脉动变慢，受到刺激时反应也慢；如果不让它安静休息，之后会出现补偿。二零二零年，科学家又在没有集中式大脑的水螅身上观察到睡眠样状态。注意，睡眠样不等于它们会做和人类一样的梦。",
+              "那睡着以后，身体到底在忙什么？可以先把科学家的研究想象成三支夜间维修队：第一队负责脑内物质的流动和清除，第二队处理神经连接和记忆，第三队研究细胞里 DNA 的损伤。这个比喻方便理解，但我要先打个补丁：三支维修队的证据成熟度不同，也不一定只能在睡觉时工作。",
+              "先看最出圈的“大脑洗澡说”。二零一三年，研究者在小鼠实验里发现，睡眠或特定麻醉状态下，脑组织细胞之间的空间增加大约百分之六十，脑脊液与组织液交换更明显，一些代谢物清除得也更快。注意，这是小鼠脑组织间隙变化，不是说人脑里的胶质细胞突然缩水百分之六十。",
+              "故事还没完。二零二四年，另一组研究者用不同的方法测量小鼠脑内染料清除，反而发现睡眠时清除速度降低。后来也有研究者质疑这套测量方法。听起来像研究人员在互相拆台，其实这才是科学的正常剧情：方法不同、测量对象不同，结论可能不同。睡眠和脑液体流动有关，但现在不能把“大脑只在睡觉时才能冲洗干净”当成铁律。",
+              "第二支维修队负责神经连接。白天你认识新朋友、学习走路、记住一首歌，神经元之间的连接会不断变化。突触稳态假说提出，睡眠可能帮助神经网络在保留重要信息的同时，调整整体连接强度，让系统不至于越学越嘈杂。这是有证据支持、也仍在研究的机制，不是每条弱突触都会被一刀切成零。",
+              "所以睡觉不只是删掉没用的东西。研究还发现，睡眠期间大脑会重新激活白天的部分记忆，帮助它们与已有知识整合。你可以想成，白天拍了满满一手机照片，夜里系统在整理相册。可别理解成考前睡一觉就自动掌握高数：睡眠帮忙巩固已经学过的内容，不能代替白天真正的学习。",
+              "第三队是细胞核维修工。二零一九年，科学家在活体斑马鱼的神经元里观察到，清醒时某些 DNA 双链断裂会积累，而睡眠时染色体运动增加，相关损伤数量下降。这个结果很有意思，提示睡眠可能帮助细胞维护。不过，实验对象是斑马鱼神经元，不能简单宣布所有物种、所有细胞，都只有睡着才能修 DNA。",
+              "还有一笔不能忽略的生态账。很多昼行性动物夜里看不清，继续乱跑不仅不好找吃的，还可能更危险。找个安全位置休息，也可能节省能量、减少无效活动。夜行性动物又会把作息调到另一个时间段。睡眠不是所有物种共同执行的一张时间表，它会跟觅食方式、天敌和生存环境一起变化。",
+              "更有意思的是，有些动物连睡法都和我们不一样。比如部分鲸豚能出现单侧半球睡眠，一边大脑休息，另一边维持必要的警觉和呼吸活动。这像什么？别人是整台电脑休眠，它倒像把两个处理器轮班值夜。当然，这种比喻不代表动物真的有两套独立意识。演化没有统一规定，大家必须连续睡够八小时。",
+              "所以，动物为什么要睡觉？很可能不是因为某一项神奇功能，而是神经网络、记忆、细胞维护和生态节律等多种因素共同作用。科学家已经找到不少线索，也还在争论具体机制。最后让草原上的鬣狗总结一下：狮子睡觉可不代表它不厉害，人家是在认真维护自己。至于你，今晚打算几点给大脑下班？"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return MP3(path).info.length
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/12 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run([FFMPEG,'-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run([FFMPEG,'-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, twelve scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==12
+          assert d['word_boundaries_found']==12, 'Expected WordBoundary timestamps for all twelve scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          test -s narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: animal-sleep-wild-theater-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
