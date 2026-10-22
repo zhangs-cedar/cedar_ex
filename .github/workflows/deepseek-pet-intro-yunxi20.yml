@@ -1,0 +1,171 @@
+name: DeepSeek pet introduction Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/deepseek-pet-intro-yunxi20.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all ten scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "我发现一件挺有意思的事。你开着电脑写东西，屏幕角落突然蹲着一只小家伙。你摸摸它，它会回你一句话。你继续忙，它还能自己碎碎念。最近有人把这种桌宠接上了 DeepSeek。听起来有点可爱，但它真的有用吗？今天我拿一个开源项目，给你看它到底是什么。",
+              "先说清楚，DeepSeek 桌宠不是一个统一的官方软件。网上有好几个开发者做的第三方作品，有的只是会动的小人，有的接上大模型，能聊天。我今天主要看 GitHub 上这个叫 desktop-pet-ai 的 Windows 项目。下面展示的界面，来自作者公开的项目截图，不是假装我在电脑上亲测。",
+              "你看这个画面。小家伙就悬浮在桌面上，不用每次专门打开一个聊天网页。按照作者的介绍，点一下能摸头，平时有状态标签；你可以拖着它走，也能调整大小。感觉有点像以前的 QQ 宠物，只不过这次它背后接的是 AI。",
+              "比如你说，我这个文档改到第八版了，怎么还没完？它不一定能替你改完，但是能陪你聊两句，顺便接住你的吐槽。这个项目的聊天回复、主动碎碎念，作者都说是实时生成的，不是预先录好的几百句台词。它当然也会答错，所以别把一个可爱头像当成靠谱顾问。",
+              "还有一个挺实用的点：作者说可以把图片拖进桌宠窗口，也可以粘贴刚截的图，再问它这张图有什么问题。比如你在写 PPT，截一页让它帮忙提修改建议，比来回切窗口省事。注意，这只是项目声明支持的功能，具体识图效果取决于后端模型和运行环境。",
+              "它还会参考时间、天气和正在使用的软件，决定说什么。你在写代码，它可能聊代码；你开着视频，它可能顺着话题搭一句。听着很贴心，但这也意味着，你得看看它会读取哪些应用信息、发送到哪里。特别是公司电脑，别因为一个小桌宠，就把隐私问题跳过去。",
+              "如果你想试，别在搜索结果里随便找个压缩包。这个项目的 README 给出的办法是去 GitHub Releases 下载 Windows 版本，解压运行 DesktopPet.exe。首次使用时，作者提供的内置方案需要登录 DeepSeek 网页版；它也支持配置自己的 API 服务。不同版本步骤可能调整，具体以项目发布页为准。",
+              "项目宣传内置方式不用另外买 API Key，但这个做法依赖网页版登录和第三方封装。我不建议你据此认定它一定长期免费、永远稳定。用自己的 API 也可能产生费用。另外，它是第三方开源项目，不代表 DeepSeek 官方替你审核过代码。下载前看看更新、权限和网络行为，工作资料尽量别直接往里扔。",
+              "我的看法很简单。如果你只是想找个桌面搭子，偶尔聊天、摸两下放松放松，这东西挺有意思。如果你想要的是一个真正帮你写代码、整理文件、稳定完成工作的助手，那就别期待桌宠外壳能自动解决所有问题。它最吸引人的地方，是把 AI 从一个网页输入框，变成了桌面上随手能碰到的东西。",
+              "如果你想看我下一期实际拆一拆它的安装、资源占用和联网行为，可以告诉我。也想问你一句：电脑上真住着这么一只小家伙，你会觉得有陪伴，还是觉得它挡着你干活？"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/10 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, ten scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==10
+          assert d['word_boundaries_found']==10, 'Expected WordBoundary timestamps for all ten scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Download attributed upstream product screenshots
+        run: |
+          mkdir -p assets
+          curl -fsSL --retry 3 "https://raw.githubusercontent.com/toki-2004/desktop-pet-ai/main/assets/screenshots/appearance.png" -o assets/appearance.png
+          curl -fsSL --retry 3 "https://raw.githubusercontent.com/toki-2004/desktop-pet-ai/main/assets/screenshots/chat.png" -o assets/chat.png
+          curl -fsSL --retry 3 "https://raw.githubusercontent.com/toki-2004/desktop-pet-ai/main/assets/screenshots/ai_settings.png" -o assets/ai_settings.png
+          file assets/*.png
+          test "$(find assets -type f -name '*.png' | wc -l)" -eq 3
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepseek-pet-intro-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+            assets/*.png
+          if-no-files-found: error
+          retention-days: 7
