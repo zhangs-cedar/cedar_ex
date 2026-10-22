@@ -1,0 +1,163 @@
+name: AI PPT Howto Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/ai-ppt-howto-yunxi20.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all twelve scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "晚上九点，老板突然发消息：明早开会，给我一份八页的工作汇报。你打开空白 PPT，盯着那个闪烁的光标，大脑和屏幕一样白。先别疯狂找模板。AI 确实能帮你做 PPT，但秘诀不是一键生成，而是让它按正确顺序干活。",
+              "很多人第一步就输了。他给 AI 发一句：帮我做一个年终总结 PPT。AI 很勤奋，给他八页“加强协同、持续赋能、提质增效”。每一页都很像领导讲话，仔细一看，却什么也没说。问题不是它不会排版，而是你没告诉它汇报给谁、要解决什么。",
+              "更靠谱的做法，是先给 AI 六样东西：主题、听众、目标、真实材料、页数、画面风格。比如：面向部门主管，做一份八页的项目季度复盘，目的不是报流水账，而是争取下一季度的人力。用我给的进度、问题和数据做依据，风格简洁，每页只讲一个结论。",
+              "你可以直接复制这段模板：你是专业汇报顾问，请基于我提供的材料，为某类听众制作八页 PPT。先给每页标题、核心结论、推荐图表和讲述顺序。不要编造数据，未知的内容标成待补充。等我确认大纲后，再生成页面。注意，最后这句话很关键：先确认结构，再开始画图。",
+              "AI 给出八页大纲之后，先检查顺序。老板最想知道的，其实只有三件事：进展怎么样，为什么没达到预期，下一步怎么补救。你应该把八页排成一个故事：结论、目标、成绩、差距、原因、方案、资源需求、下一步。不是页数越多越专业，而是每一页都能回答一个问题。",
+              "这里有个危险陷阱：AI 很擅长把没有的数据，讲得像真的一样。比如它突然写出：效率提升百分之三十，客户满意度九十八分。你要做的是把每个数字与真实报表核对，检查时间范围、统计口径和来源。没有证据就写“待补充”，别让一个漂亮图表毁掉你明天的汇报。",
+              "大纲确认后，再选做页面的工具。想快速做出成套演示，可以试 Gamma；主要用中文办公、习惯 WPS 的人，可以试 WPS AI 生成 PPT；如果公司本来就在用微软三六五，而且开通了对应 Copilot 功能，就可以直接在 PowerPoint 里做。别为了追新工具，把自己熟悉的工作流全推翻。",
+              "以 Gamma 为例。进入创建页面后，可以选择从主题生成、粘贴已有文字，或者导入现成材料。既然我们已经有经过审核的大纲，我更建议粘贴大纲，让工具重点负责视觉布局。然后选择适合汇报的风格，检查每一页，再从导出菜单下载 PPTX。这个演示是流程示意，不是实时软件录屏。",
+              "AI 排好版，也不意味着你可以直接交差。拿一页“工作情况”举例，满屏十条小字，观众只能假装在听。把标题改成“交付周期缩短两周”，下面只留一张对比图、两个关键数字和一句原因。每页一个结论，字体大一点，留白多一点，观众一眼就知道你要说什么。",
+              "别忘了导出后的最后一公里。Gamma 支持导出 PowerPoint 文件，但换到其他软件后，字体、布局可能有差异。有些动画也未必保留。你需要亲自打开 PPTX，检查文字有没有溢出，图片是否失真，图表数字能不能核对，重要元素是否能编辑。能打开，不等于能上台。",
+              "最后别忘了两件事。第一，让 AI 为每页写三十秒以内的口头讲法，然后自己彩排，看看总时长和过渡是不是自然。第二，客户名单、工资、商业机密，不要随手贴进未经批准的云端工具。企业资料该脱敏就脱敏，先看公司规定，再看工具的权限。效率很重要，信息安全更重要。",
+              "总结一下，AI 做 PPT 不是“输入一个标题，然后祈祷”。正确流程是：准备真实材料，讲清任务约束，先审大纲，再让工具排版，核实数据与导出效果，最后彩排演讲。AI 负责加速，你负责判断。下次再遇到“明天早上要 PPT”，至少不用对着空白第一页发呆了。评论区说说，你最想让 AI 帮你省掉哪一步？"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/12 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, twelve scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==12
+          assert d['word_boundaries_found']==12, 'Expected WordBoundary timestamps for all twelve scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-ppt-howto-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
