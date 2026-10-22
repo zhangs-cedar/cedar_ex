@@ -1,0 +1,163 @@
+name: GroundingPI cow science explainer Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/groundingpi-cow-video-yunxi20.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all twelve scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "机器人收到一个命令：把桌上那个绿色杯子拿起来。它很自信，机械臂也伸过去了，结果差两厘米，啪，碰倒旁边的苹果。问题不一定是它不懂中文，而是它没有真正搞清楚，目标到底在哪里。今天来聊一篇很新的论文，GroundingPI。它想解决的就是具身智能里这个看似简单、实际很要命的问题。",
+              "先说清楚，机器人看懂一句“拿杯子”，和精准定位杯口、杯身甚至抓取位置，是两回事。传统通用视觉语言模型可以描述整张图片，却未必擅长拥挤桌面上的小目标、遮挡物和复杂的空间位置。动作学习如果建立在模糊的视觉信息上，后面的规划再聪明，也可能伸错手。",
+              "Grounding 在这里不是聊天时的事实依据，而是视觉指代与定位。比如你说“最左边、靠近红苹果的绿色杯子”，模型要在图片里找到对应物体，再输出它的位置。最常见的表示是检测框，也可以是具体的点。对机械臂来说，这些位置输出比一句“我看到杯子了”更容易用于后续动作模块。",
+              "这项研究在二零二六年九月三十日公开，后来又更新了版本。团队提出了一个四十亿参数的 GroundingPI，专门强调定位基础能力。核心想法不复杂：与其直接让一个通用模型一边看、一边想、一边控制，不如先把“看得清、找得准”这门基本功单独练扎实，然后再把视觉骨干接到具身任务里。",
+              "结构上，它有视觉编码部分，也有理解文本和生成结果的语言骨干。关键是把点和框的位置变成离散化的空间坐标标记，让定位结果可以统一生成。你可以把它想象成：普通模型回答“桌上有个杯子”，它不仅回答“有”，还交代“就在这里”。当然，输出一个框，并不等于机器人已经学会了抓取力度和运动轨迹。",
+              "训练过程分成几段：先做多模态和空间相关的预训练，再用监督数据微调，最后使用包括 GRPO 在内的强化学习办法进一步优化。数据覆盖了检测、指代定位、点定位、文字识别、界面元素等多种视觉能力。它不是单独刷一个目标检测数据集，而是试图让模型学到可以迁移的空间定位常识。",
+              "接下来是最容易被标题党带跑的一段：成绩。论文在三十四个 Grounding 基准、十一类感知能力上比较了四十四个基线，报告的综合平均分是百分之七十三点六八，列出的 GPT-6 Astra 是百分之七十一点五四。注意，这是论文特定评测集合中的结果，不代表它在所有任务上都比通用模型更强，更不是比较聊天或者推理能力。",
+              "真正值得关注的是接上机器人后的变化。论文报告，在 RoboTwin 二点零的四种分布外测试里，GroundingPI 作为视觉骨干，相对最强对照方案最高提升百分之二十四点八。这里的关键词是“最高”和“相对提升”，不是每个任务稳定提高二十四点八个百分点，也不能直接推导出真机成功率。",
+              "另一个实验叫 RoboCasa-GR1。论文写的是：使用百分之五十示范数据训练、采用 GroundingPI 视觉骨干的模型，表现超过用百分之七十五示范数据训练的对照方法。它说明更扎实的感知可能提高示范数据利用效率。但这不是说任何机器人都能无条件省下一半数据，更不是说训练成本自动减半。",
+              "研究还把这套视觉能力用于自动驾驶，在 nuScenes 的开放环路预测评测上，报告平均 L2 误差为零点二九六米。数字确实值得看，但开放环路评测不等于在真实道路上自动驾驶的安全证明。感知底座更强，是一个重要进展，却不是直接拥有了可以放心上路的完整驾驶系统。",
+              "如果你平时做工业视觉或者数据标注，可能更关心：到底能不能用起来？目前项目已经公开代码和权重，X-AnyLabeling 也有 GroundingPI 的集成文档。它支持按类别检测、按自然语言描述定位、点定位等流程。不过这是模型与标注工具的能力展示，实际部署还要看显存、推理延迟、许可证和你的数据域。",
+              "所以我觉得，GroundingPI 值得关注的，不是“又刷榜打败谁”，而是提出了一个对具身智能很实在的路线：先把小目标、密集场景和空间定位练好，再让后续策略模型学习怎么行动。这也有点像工业视觉里的老道理：定位误差不解决，控制再精细也只能精准地抓错东西。它是不是具身领域的 GroundingDINO 时刻，还得看更广泛的复现和真实场景落地。"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/12 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, twelve scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==12
+          assert d['word_boundaries_found']==12, 'Expected WordBoundary timestamps for all twelve scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: groundingpi-cow-video-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
