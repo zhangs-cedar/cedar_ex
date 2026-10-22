@@ -1,0 +1,165 @@
+name: France unrest analysis Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/france-unrest-analysis-yunxi20.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          ffprobe -version | head -1
+
+      - name: Synthesize all fourteen scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "如果你只看到巴黎街头的火光，很容易以为法国这次又是单纯的治安失控。但这轮抗议先从学校开始，后来叠加生活成本、公共服务和政治不信任，十月十七日又在多座城市演变成暴力冲突。今天不替任何阵营喊口号，我们把时间线、数字和争议拆开看。先记住一句：上街的人，不等于砸店的人。",
+              "时间往前拨到九月下旬。巴黎北部一些地区的高中生开始封堵校门，提出的诉求并不抽象：老师不够、课程被取消、校舍和设施老旧、上课时间太长。学生觉得，社会要求他们认真学习、规划未来，却连稳定的教学条件都不能保证。运动很快扩散到其他城市，也把教师和公共部门的抱怨带进了同一场讨论。",
+              "政府并不是完全没有回应。法国教育部十月公布的措施包括，向最需要的高中部署三千多名代课教师，批准额外招聘，并在二零二七年教育预算中增加十二亿欧元。官方也承认，缺课、校舍条件和学生参与决策的问题需要继续处理。但公告和学生的体感之间，还有一段距离：钱什么时候到位、谁负责修楼、缺课什么时候补上，才决定承诺有没有变成日常生活里的改变。",
+              "第二条压力线是生活成本。法国国家统计局公布，二零二六年九月消费者价格同比上涨百分之三点一；其中能源价格同比上涨百分之二十一点三。注意，这不是说所有东西都涨了百分之二十一点三，而是能源这一项涨得特别快。对通勤者来说，油箱每次加满都更贵；对小店来说，运输、供暖和运营成本也会传导进账单。工资没同步增长时，宏观数字就会变成每个月的具体焦虑。",
+              "十月十七日，学生诉求、工会动员和对生活成本的不满汇集成全国示威。法国内政部估计约五十五万人参加，工会 CGT 给出的估计约八十万人。两组数字来自不同机构，不能当成精确点名。重要的是，规模确实很大，而且大批人和平游行。示威现场既有“学校要老师”的牌子，也有反对物价上涨和公共服务削减的标语。",
+              "但在部分城市，和平示威与暴力行动开始并行。有人纵火、砸毁店面、抢掠商铺，也有人向警察投掷物品。利摩日的历史市政厅严重焚毁，马赛和里昂的公共建筑也遭到破坏。警方与暴力人群冲突，商家和普通居民承担了损失。媒体画面里最醒目的往往是火焰和碎玻璃，可不能因此把整场游行的所有参与者都算成暴徒。",
+              "拘捕数字也随着调查推进不断更新。十月十七日晚，政府报告约一千二百人被捕；次日的报道提到约二千四百人；到十月二十一日，司法部长说拘留人数约二千五百，其中九百一十七人被移交起诉，一百七十四人已经入狱。这里的“被拘留”“被起诉”和“入狱”不是同一个概念，更不等于所有被捕者都已经被法院定罪。数字要连同日期和法律阶段一起读。",
+              "那为什么事情会扩大？更合理的解释不是找一个万能原因，而是看几股压力如何叠加。学校问题提供了最初的动员人群；能源和生活成本让更多家庭觉得预算被挤压；公共服务削减的担忧，让人怀疑未来还会不会更差；政治长期僵持，又让人不相信抱怨能通过正常渠道得到回应。这些因素可以解释为什么很多人愿意上街，却不能自动解释每一次纵火或抢劫。动机和犯罪责任必须分开判断。",
+              "接下来是最容易被网络叙事带偏的一段：到底是谁在制造暴力？政府把部分事件归因于极左激进分子和趁乱抢劫者，警方也对具体案件展开调查。美联社的事实核查则指出，目前没有证据把法国这轮骚乱整体归咎于穆斯林移民，也没有一个族群被官方认定为主要责任方。个别案件里有嫌疑人或政治背景，不等于可以把整个社会群体一概而论。先查证据，再谈归因，才不会把危机变成替某个阵营造势的素材。",
+              "警方的应对也受到审视。政府承认，十月十七日的情报判断和部署存在问题，警力过于固定，没有充分预判多点、快速移动的冲突；内政部长公开承担部分责任。与此同时，媒体调查核实，一名佩戴记者标识的记者在巴黎示威现场被新型震撼弹 GL-304 炸伤。这里需要同时问两件事：警方如何保护公众和自身安全，以及使用的装备与武力是否符合必要性、比例性。维护秩序和保障和平示威权利，并不是只能二选一。",
+              "再看经济这一层。十月二十一日，法国十年期国债收益率一度达到百分之五，是二零零二年七月以来的高位。它反映投资者要求更高回报，也反映市场担心法国财政和政治局势。不能说这一切都是骚乱造成的：法国原本就有赤字、债务和预算谈判难题；但街头冲突会增加不确定性，破坏商户经营，也让政府处理其他问题更难。于是出现一个危险的反馈环：生活压力引发抗议，暴力损害经济和信任，财政压力又压缩政府解决民生的空间。",
+              "很多人会想到二零一八年的“黄背心”运动。当年，燃油税和生活成本是重要导火线，运动通过道路封锁和街头示威持续施压，政府后来作出代价不小的让步。这一次也出现黄背心参与者，但同时有学生、工会和公共服务议题，组织更分散，诉求也不完全相同。相似之处是生活成本和对政治代表性的怀疑；不同之处是，不能把两次运动简单当成同一场抗议的续集。",
+              "截至十月二十二日，局部宵禁已经在巴黎部分街区、里昂市中心和马赛部分区域实施；政府计划为十月二十四日可能出现的新一轮示威加强安保。学生组织和黄背心团体都已发出继续动员的信号，工会则计划在十一月五日举行全国性罢工。教育部承诺的代课教师、招聘和预算增加，是可以核对的政策动作；但生活成本、公共服务和警务争议还需要各自的解决方案。接下来要看承诺有没有明确期限、资金和问责。",
+              "所以，法国这次骚乱不是一句“都是移民造成的”，也不是一句“全是警察的问题”就能解释。我们至少要同时观察三条线：第一，学校和生活成本的诉求有没有实质回应；第二，纵火、抢劫等具体违法行为是否依法追责，警方行动也是否接受独立审查；第三，政府能不能在财政受限、议会分裂的情况下拿出可执行的方案。火焰会在几小时内熄灭，信任的修复却需要更久。真正值得追踪的，不只是下一场示威有多少人，而是下一次回应能不能改变人们每天面对的现实。"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return float(subprocess.check_output([
+                  'ffprobe','-v','error','-show_entries','format=duration',
+                  '-of','default=noprint_wrappers=1:nokey=1',str(path)
+              ], text=True).strip())
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/14 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, fourteen scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==14
+          assert d['word_boundaries_found']==14, 'Expected WordBoundary timestamps for all fourteen scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: france-unrest-analysis-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
