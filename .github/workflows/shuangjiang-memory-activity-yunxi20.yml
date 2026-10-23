@@ -1,0 +1,157 @@
+name: Shuangjiang Memory Home Art Activity Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/shuangjiang-memory-activity-yunxi20.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          python -m pip install --disable-pip-version-check --quiet edge-tts==7.3.1 imageio-ffmpeg mutagen
+          python -c 'import edge_tts, imageio_ffmpeg, mutagen; print(imageio_ffmpeg.get_ffmpeg_exe())'
+
+      - name: Synthesize all nine scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess, imageio_ffmpeg
+          from mutagen.mp3 import MP3
+          FFMPEG=imageio_ffmpeg.get_ffmpeg_exe()
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "霜降，是秋天写给时光的一封信。今天，记忆家园把这份秋意，带进一场温暖的手工时光。",
+              "没有统一的标准答案。长者们可以自己挑选喜欢的落叶、花材和色彩。金黄、深红，每一种选择，都值得被尊重。",
+              "选好了，就慢慢拼。摆一摆，换个位置，再贴上去。一张纸，几片叶子，就能组合出属于自己的秋天。",
+              "看似简单的手作，其实藏着很多小练习：观察形状、辨认颜色、思考布局，再动动手指，完成细细的粘贴。",
+              "如果一片叶子贴歪了，也没有关系。我们不急着纠正，更愿意听长者说：我就是想把它放在这里。",
+              "在交流、陪伴和创作里，注意力渐渐回到眼前。参与活动，也为舒缓心情、稳定情绪提供了温和的空间。",
+              "作品完成时，大家互相看看、聊聊。有人喜欢满满一幅秋景，有人偏爱简单的几笔。每件作品，都是独一无二的表达。",
+              "所谓非药物疗法，不是让一张纸代替治疗。而是在专业照护之外，用有意义的活动，支持认知参与、精细动作和情绪体验。",
+              "霜降有暖，岁月有光。记忆家园愿意把更多选择、耐心和陪伴，留给每位长者。"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return MP3(path).info.length
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/9 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run([FFMPEG,'-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run([FFMPEG,'-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, nine scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==9
+          assert d['word_boundaries_found']==9, 'Expected WordBoundary timestamps for all nine scenes'
+          assert d['duration_seconds']>35
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          test -s narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: shuangjiang-memory-activity-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
