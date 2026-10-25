@@ -1,0 +1,176 @@
+name: Talatan 28 pages science video Yunxi +20% narration
+
+on:
+  push:
+    branches:
+      - ai/yunxi-voice-20261022
+    paths:
+      - .github/workflows/talatan-28pages-yunxi20.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Edge TTS and media tools
+        run: |
+          python -m pip install --disable-pip-version-check --quiet edge-tts==7.3.1 imageio-ffmpeg mutagen
+          python -c 'import edge_tts, imageio_ffmpeg, mutagen; print(imageio_ffmpeg.get_ffmpeg_exe())'
+
+      - name: Synthesize all 28 scenes using exact Yunxi +20 percent
+        run: |
+          python - <<'PY'
+          import asyncio, json, re, subprocess, imageio_ffmpeg
+          from mutagen.mp3 import MP3
+          FFMPEG=imageio_ffmpeg.get_ffmpeg_exe()
+          from pathlib import Path
+          import edge_tts
+
+          VOICE = 'zh-CN-YunxiNeural'
+          RATE = '+20%'
+          SCRIPTS = [
+              "听说青海有一片地方，十年前风沙飞扬，后来铺上光伏板，下面居然长草，还来了上万只羊。听着像什么？像给沙地装了太阳能充电宝，附赠自动绿化功能。可这件事，究竟有多真？今天我们带着一只特别爱抬杠的羊，去塔拉滩认真查查。",
+              "先定位，不是海南岛，是青海省海南藏族自治州的共和县。塔拉滩位于青藏高原东北缘，研究区海拔大约两千九百米。这里空气稀薄、日照强，降水不多。羊助理兴奋地说：这地方太阳开了年卡。科学家补一句：但水可没办会员。",
+              "网上最常见的误会之一，是把塔拉滩整个地区和光伏产业园当成一个东西。地方报道给出的塔拉滩总面积约两千一百三十六平方公里，而光伏园区规划规模是另一回事。不能说整个塔拉滩都铺满了太阳能板，那羊上哪儿找回家的路？",
+              "美联社二零二五年实地报道说，当地向记者介绍的完整规划大约六百一十平方公里、超过七百万块组件。当时已经有约三分之二土地完成板阵建设。这是那一时点的建设进度和完成后的目标，不能把规划面积偷偷改成早就竣工的面积。",
+              "地方政府转载报道提到，塔拉滩一度有约六百七十四平方公里荒漠化土地。这里的自然本底是高寒干旱区、沙地和草地交错，并不是一片完全没有生命的沙海。荒漠化，说的是土地退化过程；不是让科学家把全域一键判成寸草不生。",
+              "地方报道把二零一二年作为光伏基地规模化建设的重要起点。可它不是某天有个人一按开关，第二天土地就冒草了。施工、播种固沙植物、围栏管理、灌溉和后续维护，也加入了这场漫长的生态变化。羊助理：所以不是一键美颜，是长期施工加保养。",
+              "想象一下，一排排板架像给地表摆上巨大的挡风屏障。近地风速可能变小，风对土壤的直接扰动也会变化。地方报道提到园区某些统计口径下风速降低五成，但这不能变成全区每一个角落、每一天都减少五成。风可不按宣传片分镜吹。",
+              "太阳能板挡住部分辐射，板下温度、蒸发需求和土壤水分可能因此变化。对干旱地区的某些植物来说，这能帮忙。可是光照少了，植物光合作用也会受限制。羊助理提出灵魂问题：遮阳伞有用，但难道种草也能全年躺平不晒太阳？",
+              "地方报道明确写到，有播种和科学灌溉措施。光伏组件还需要清洗，水可能流到板下或边缘。二零二六年一项覆盖青藏高原多个电站的研究发现，额外水分投入会显著影响植被恢复判断。注意，它不是塔拉滩单独测出的数字，但提醒我们必须追问：这片绿，谁付的水费？",
+              "有研究说，土壤水分是植被变化的主要解释因素，模型报告了百分之六十二点零九这样的结果。千万别把它剪成“塔拉滩土壤水增加百分之六十二”。前者讨论统计解释，后者是实际水分涨幅；两者差得像羊的户口本和羊毛重量。",
+              "二零二四年一篇同行评审论文，给共和光伏园区做了五十七项指标组成的综合生态评价。园区内得分约零点四三九，过渡区域约零点二八六，外部参照约零点二八零。园区内确实相对更高，可在论文评级中它也只是“一般”，并不是“满分生态乐园”。",
+              "羊助理看到零点四三九，立刻掏出计算器：懂了，绿化率百分之四十三点九！先别。这个数字是把生态、社会和管理等指标归一化加权后的综合得分，不是一块地上有多少草。报告里出现的小数，也不能直接当成降温、减风或者湿度的百分比。",
+              "二零二六年八月又有一篇直接研究塔拉滩的论文，采集一百零九个样方，比较固定板下、板间、不同跟踪支架和参照草地。好消息是，它不只看一张绿油油的航拍图，而是钻进去看不同位置的植被和土壤碳。羊助理终于拿出实验笔记，决定不再靠自拍证明生态。",
+              "结果很值得放大：在那项研究里，固定光伏板的遮阴位置，地上植被生物量碳比参照草地低约百分之二十九点二。地下植被碳也有偏低信号，但统计支持更不确定。也就是说，大园区某些指标变好，不代表每一块板的正下方都长得更旺。",
+              "羊助理拍桌：二零二四年说变好，二零二六年说有地方变少，到底听谁的？都要听清楚。前者是一个区域综合评价，后者是在园区里比较不同微生境的植被碳。比较指标、样地位置和参照对象都不同。科学不是综艺互撕，不能只截取一句话就宣布赢家。",
+              "板下阴影深，板间日照强，板边可能集中雨水，有的支架还会追着太阳转。把它们统称为一个“光伏区”，就像把羊圈里晒太阳的、躲雨的和正在加班的羊全算成同一种生活方式。研究强调，必须按不同位置单独观察。",
+              "说到光伏羊，它不是去给组件擦玻璃，更不是给太阳能发电。草长高了，管理方需要控制植被，降低遮挡、巡检困难和一些火险。部分牧民在允许的季节进场放牧，羊能吃草，企业减少部分除草工作。羊助理宣布：本人职位是生态割草机，工资发草就行。",
+              "羊帮忙吃草，前提是别把草全吃光。太密的放牧会带来踩踏、裸地增加和植被组成变化。科学管理要看草量、放牧季节、围栏安排与恢复周期。一个园区能养羊，不意味着全国任意光伏站都可以直接塞羊进去。",
+              "地方二零二五年报道说，当地存栏光伏羊一万多只，同时又提到园区全面建成后的近八万羊单位养殖潜力。先注意：一个是当时存栏，另一个是未来规划承载量；“羊单位”也不等同于逐只点数。把它们混写，羊可能都没这么会繁殖。",
+              "地方报道举了园区安保、绿化管护等岗位案例，还提到牧民通过放牧节省饲草。这个方向是实实在在的产业联系，但案例收入不是所有牧户的平均工资。要评价整体收益，还得看受益人数、雇佣时间、合同、草场权属，以及谁承担生态维护成本。",
+              "光伏板白天确实能发电，但离用电大城市很远，美联社采访也指出，西部能源基地与东部消费中心地理错配。高压输电通道是解决办法之一，青海到河南已有清洁能源输送工程。羊助理想快递太阳光，可惜电网不是普通快递柜。",
+              "光伏有低碳发电优势，但别把“运行时不烧煤”剪成“建设和维护完全零排放”。组件生产、支架建设、交通、清洗用水、用地变化和退役回收都需要纳入环境账。比好坏，要看生命周期和替代的发电结构，而不是让羊对着镜头说永远零成本。",
+              "镜头拉远，蓝色板海夹着草地确实漂亮。可是拍到绿色，不能证明每个季节都绿；看到羊，也不能证明没有过牧；某些地方恢复，不能证明所有地方一致改善。最有说服力的，是建设前后、相近对照、长期监测和多种生态指标。滤镜能调色，调不出因果关系。",
+              "二零二六年还有研究显示，高原另一处光伏草甸里，板下、板边与板间的植物和微生物反应各不相同。很有参考价值，但那项工作在甘肃玛曲，不在塔拉滩。引用时必须写清地点，不能一看都在青藏高原，就把人家实验站搬家。",
+              "现在来现场打假。光伏板能改变风、光、土壤水分？有研究支持。“整个塔拉滩都变成草原”？范围过大。“不用额外用水也能绿”？证据不足。“光伏板下草一定更茂盛”？直接与部分样地结果冲突。最好的解说，不是越肯定越厉害，而是知道哪里该给结论踩刹车。",
+              "塔拉滩这个案例最有意思的地方，不是某一张宣传照片，而是把能源开发、局地生态变化和牧民生计放在了一起。但三张成绩单必须分别检查。发电多，不自动等于生物多样性改善；草多，也不自动等于每位牧民收入增加。想得到三赢，需要好设计和长期管理。",
+              "如果真的去塔拉滩做下一轮采访，我会问五个问题。第一，真实建成容量和发电量是多少？第二，清洗与灌溉一年用了多少水？第三，板下和板间草量怎么变？第四，放牧和收益如何分配？第五，组件老化退役后谁负责恢复土地？羊助理已经把问题抄在小本本上了。",
+              "结论来了：塔拉滩不是凭空造出来的童话绿洲，也不是毫无价值的光伏骗局。大型光伏确实改变了当地环境，并创造了牧光互补的实践；但效果有空间差异，水和管护不可忽略。科学讲清楚这些不确定，反而更值得夸。至于羊助理，它的最终评语是：板上发电，板下吃草，报告里别乱吹牛。"
+          ]
+          ROOT = Path.cwd()
+          AUDIO = ROOT / 'audio'
+          AUDIO.mkdir(exist_ok=True)
+
+          def duration(path):
+              return MP3(path).info.length
+
+          def srt_time(seconds):
+              ms = round(max(0, seconds) * 1000)
+              h, ms = divmod(ms, 3600000)
+              m, ms = divmod(ms, 60000)
+              s, ms = divmod(ms, 1000)
+              return f'{h:02}:{m:02}:{s:02},{ms:03}'
+
+          def make_cues(bounds, total, fallback):
+              if not bounds:
+                  chunks = [x.strip() for x in re.split(r'(?<=[。？！；])', fallback) if x.strip()]
+                  count = sum(len(x) for x in chunks) or 1
+                  t, out = 0.0, []
+                  for chunk in chunks:
+                      for start in range(0, len(chunk), 15):
+                          part = chunk[start:start+15]
+                          span = total * len(part) / count
+                          out.append({'start':t,'end':min(total,t+span),'text':part,'estimated':True})
+                          t += span
+                  return out
+              out, group = [], []
+              for b in bounds:
+                  group.append(b)
+                  text = ''.join(x['text'] for x in group).strip()
+                  if len(text) >= 14 or (len(text) >= 7 and text[-1:] in '。？！；，、'):
+                      out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':text})
+                      group = []
+              if group:
+                  out.append({'start':group[0]['start'],'end':min(total,group[-1]['end']+.08),'text':''.join(x['text'] for x in group).strip()})
+              return out
+
+          async def main():
+              segments, absolute = [], 0.0
+              for i, script in enumerate(SCRIPTS, 1):
+                  target = AUDIO / f'{i:02}.mp3'
+                  bounds = []
+                  talk = edge_tts.Communicate(script, voice=VOICE, rate=RATE, boundary='WordBoundary')
+                  with target.open('wb') as f:
+                      async for chunk in talk.stream():
+                          if chunk['type'] == 'audio':
+                              f.write(chunk['data'])
+                          elif chunk['type'] == 'WordBoundary':
+                              bounds.append({'text':chunk['text'],'start':chunk['offset']/10_000_000,'end':(chunk['offset']+chunk['duration'])/10_000_000})
+                  sec = duration(target)
+                  cues = make_cues(bounds, sec, script)
+                  for cue in cues:
+                      cue['start'] += absolute
+                      cue['end'] += absolute
+                  segments.append({'scene':i-1,'start':absolute,'end':absolute+sec,'duration':sec,'audio':f'audio/{i:02}.mp3','cues':cues,'word_boundaries_found':bool(bounds)})
+                  absolute += sec
+                  print(f'{i}/28 voice={VOICE} rate={RATE} duration={sec:.2f}s boundaries={len(bounds)} cues={len(cues)}', flush=True)
+
+              timeline = {'total_duration':absolute,'voice':VOICE,'rate':RATE,'segments':segments}
+              (ROOT/'timeline.json').write_text(json.dumps(timeline,ensure_ascii=False,indent=2),encoding='utf-8')
+              cues = [c for s in segments for c in s['cues']]
+              (ROOT/'subtitles.srt').write_text(''.join(f'{i}\n{srt_time(c["start"])} --> {srt_time(c["end"])}\n{c["text"]}\n\n' for i,c in enumerate(cues,1)),encoding='utf-8')
+              wavs = []
+              for seg in segments:
+                  src = ROOT / seg['audio']
+                  wav = src.with_suffix('.wav')
+                  subprocess.run([FFMPEG,'-hide_banner','-loglevel','error','-y','-i',str(src),'-ar','48000','-ac','1',str(wav)],check=True)
+                  wavs.append(wav)
+              (AUDIO/'join.txt').write_text(''.join(f"file '{p.resolve()}'\n" for p in wavs),encoding='utf-8')
+              subprocess.run([FFMPEG,'-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(AUDIO/'join.txt'),'-c:a','aac','-b:a','192k',str(ROOT/'narration.m4a')],check=True)
+              for wav in wavs:
+                  wav.unlink()
+              (ROOT/'voice_manifest.json').write_text(json.dumps({'voice':VOICE,'rate':RATE,'duration_seconds':round(absolute,3),'scene_count':len(segments),'word_boundaries_found':sum(s['word_boundaries_found'] for s in segments)},ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'COMPLETE: {absolute:.2f}s, 28 scenes, {len(cues)} subtitle cues',flush=True)
+
+          asyncio.run(main())
+          PY
+
+      - name: Validate audio, subtitles, and exact voice settings
+        run: |
+          test -s narration.m4a
+          test -s timeline.json
+          test -s subtitles.srt
+          test -s voice_manifest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('voice_manifest.json',encoding='utf-8'))
+          assert d['voice']=='zh-CN-YunxiNeural'
+          assert d['rate']=='+20%'
+          assert d['scene_count']==28
+          assert d['word_boundaries_found']==28, 'Expected WordBoundary timestamps for all 28 scenes'
+          assert d['duration_seconds']>60
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+          test -s narration.m4a
+
+      - name: Upload full narration, per-scene MP3s, and subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: talatan-28pages-yunxi20
+          path: |
+            audio/*.mp3
+            timeline.json
+            subtitles.srt
+            narration.m4a
+            voice_manifest.json
+          if-no-files-found: error
+          retention-days: 7
